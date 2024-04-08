@@ -35,6 +35,5 @@ class UserServiceTest {
         System.out.println();
         System.out.println();
         System.out.println();
-        userService.registerUser("f","d","d");
     }
 }

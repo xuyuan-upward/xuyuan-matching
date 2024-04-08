@@ -2,9 +2,11 @@ package xu.yuan.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.ibatis.annotations.Delete;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import xu.yuan.Common.ErrorCode;
+import xu.yuan.Common.Result;
+import xu.yuan.Common.ResultUtils;
 import xu.yuan.model.User;
 import xu.yuan.model.UserLoginRequest;
 import xu.yuan.model.UserRegisterRequest;
@@ -33,27 +35,48 @@ public class UserController {
      * @return
      */
     @PostMapping("/register")
-    public Long UserRgister(@RequestBody UserRegisterRequest userRegisterRequest) {
+    public Result<Long> UserRgister(@RequestBody UserRegisterRequest userRegisterRequest) {
         String userAccount = userRegisterRequest.getUserAccount();
         String userPassword = userRegisterRequest.getUserPassword();
         String checkPassword = userRegisterRequest.getCheckPassword();
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            return null;
+        String planetCode = userRegisterRequest.getPlanetCode();
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR);
         }
-        return userService.registerUser(userAccount, userPassword, checkPassword);
+
+        long result = userService.registerUser(userAccount, userPassword, checkPassword, planetCode);
+        return ResultUtils.success(result);
     }
 
     /**
      * 用户登录
+     *
+     * @return
      */
     @PostMapping("/login")
-    public User Userlogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) {
+    public Result<User> Userlogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) {
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return null;
         }
-        return userService.doLogin(userAccount, userPassword, httpServletRequest);
+        User user = userService.doLogin(userAccount, userPassword, httpServletRequest);
+        return ResultUtils.success(user);
+    }
+
+    /**
+     * 用户注销
+     *
+     * @return
+     */
+    @PostMapping("/logout")
+    public Result<Integer> Userlogout(HttpServletRequest httpServletRequest) {
+        if (httpServletRequest == null) {
+            return null;
+        }
+
+        Integer i = userService.userLogout(httpServletRequest);
+        return ResultUtils.success(i);
     }
 
     /**
@@ -64,18 +87,21 @@ public class UserController {
      * @return
      */
     @GetMapping("/search")
-    public List<User> searchUser(String username, HttpServletRequest httpServletRequest) {
+    public Result<List<User>> searchUser(String username, HttpServletRequest httpServletRequest) {
         //仅管理员可查
         if (!isAdmin(httpServletRequest)) {
-            return new ArrayList<>();
+            return ResultUtils.success(new ArrayList<>());
         }
+
         if (StringUtils.isAnyBlank(username)) {
-            return new ArrayList<>();
+            return ResultUtils.success(new ArrayList<>());
         }
         LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<>();
         lqw.like(User::getUsername, username);
         List<User> list = userService.list(lqw);
-        return list.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
+
+        List<User> collect = list.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(collect);
     }
 
     @PostMapping("/delete")
@@ -92,10 +118,11 @@ public class UserController {
 
     /**
      * 是否为管理员
+     *
      * @param httpServletRequest
      * @return
      */
-    public boolean isAdmin(HttpServletRequest httpServletRequest){
+    public boolean isAdmin(HttpServletRequest httpServletRequest) {
 
         //仅管理员可查
         User user = (xu.yuan.model.User) httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);

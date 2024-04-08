@@ -1,13 +1,14 @@
 package xu.yuan.service.impl;
 
-import java.util.Date;
-
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.DigestUtils;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import xu.yuan.Common.ErrorCode;
+import xu.yuan.Eception.BusinessEception;
 import xu.yuan.model.User;
 import xu.yuan.service.UserService;
 import xu.yuan.mapper.UserMapper;
@@ -26,6 +27,7 @@ import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
  */
 @Service
 @Slf4j
+
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
     /**
@@ -34,39 +36,46 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private static final String SALT = "xuyuan";
     @Autowired
     private UserMapper userMapper;
+
     /**
-     *  用户登录态键
+     * 用户注册
+     * @param userAccount
+     * @param userPassword
+     * @param checkPassword
+     * @return
      */
-
-
     @Override
-    public long registerUser(String userAccount, String userPassword, String checkPassword) {
+    public long registerUser(String userAccount, String userPassword, String checkPassword,String planetCode) {
         //1.校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
-            return -1;
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
+          throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
         if (userAccount.length() < 4) {
-            return -1;
+           throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名输入不合法");
         }
         if (userPassword.length() < 8) {
-            return -1;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"密码输入不合法");
+        }
+        if (planetCode.length() > 5) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"编号输入不合法");
         }
         String regEx = "[\\u00A0\\s\"`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Pattern p = Pattern.compile(regEx);
         Matcher m = p.matcher(userAccount);
 
         if (m.find()) {
-            return -1;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名输入不合法");
         }
         if (!userPassword.equals(checkPassword)) {
-            return -1;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"两次密码输入不一致");
+
         }
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount);
+        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount).or().eq(User::getPlanetcode,planetCode);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
-            return -1;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名或编号已经存在");
         }
 
 
@@ -75,14 +84,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUseraccount(userAccount);
         user.setUserpassword(encryptPassword);
+        user.setPlanetcode(planetCode);
         boolean save = this.save(user);
         if (!save) {
-            return -1;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名或编号已经存在");
         }
         return user.getId();
 
     }
 
+    /**
+     * 登录校验
+     * @param userAccount
+     * @param userPassword
+     * @param httpServletRequest
+     * @return
+     */
     @Override
     public User doLogin(String userAccount, String userPassword, HttpServletRequest httpServletRequest) {
         //1.校验
@@ -104,7 +121,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-        //用户不能重复
+        //用户密码校验
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
         userLambdaQueryWrapper.eq(User::getUseraccount, userAccount)
                 .eq(User::getUserpassword, encryptPassword);
@@ -138,8 +155,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setGender(user.getGender());
         safeUser.setPhone(user.getPhone());
         safeUser.setEmail(user.getEmail());
+        safeUser.setPlanetcode(user.getPlanetcode());
         safeUser.setUserstatus(user.getUserstatus());
         return safeUser;
+    }
+    /**
+     * 用户注销
+     */
+    @Override
+    public int userLogout(HttpServletRequest httpServletRequest) {
+        //移除登录态
+        httpServletRequest.getSession().removeAttribute(USER_LOGIN_STATE);
+        return 1;
     }
 }
 
