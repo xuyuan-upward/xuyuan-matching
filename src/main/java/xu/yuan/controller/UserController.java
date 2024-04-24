@@ -65,6 +65,7 @@ public class UserController {
             return null;
         }
         User user = userService.doLogin(userAccount, userPassword, httpServletRequest);
+        System.out.println("你好鱼友，我是许苑向上");
         return ResultUtils.success(user);
     }
 
