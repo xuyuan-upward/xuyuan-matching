@@ -5,6 +5,7 @@ import xu.yuan.model.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
 * @author 肖广龙
@@ -44,4 +45,21 @@ public interface UserService extends IService<User> {
      * 用户注销
      */
    int userLogout(HttpServletRequest httpServletRequest);
+
+    /**
+     * 根据标签搜索用户
+     * @return
+     */
+    List<User> searchUserByTag(List<String> tagLiat);
+
+    int updateUser(User user, User logUser);
+
+    /**
+     * 获取当前用户信息
+     */
+    public User getLogUser(HttpServletRequest request);
+
+    boolean isAdmin(User logUser);
+
+    public boolean isAdmin(HttpServletRequest httpServletRequest);
 }

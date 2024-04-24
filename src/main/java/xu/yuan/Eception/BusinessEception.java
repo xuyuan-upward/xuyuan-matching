@@ -1,6 +1,4 @@
 package xu.yuan.Eception;
-
-import com.sun.xml.internal.ws.api.ha.StickyFeature;
 import lombok.Data;
 import xu.yuan.Common.ErrorCode;
 
