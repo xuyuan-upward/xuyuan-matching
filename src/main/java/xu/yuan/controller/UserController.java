@@ -26,7 +26,6 @@ import static xu.yuan.Constant.UserConstant.*;
  */
 @RestController
 @RequestMapping("/user")
-@CrossOrigin(origins = {"http://127.0.0.1:5173/"})
 //允许这个IP跨域
 public class UserController {
     @Autowired
@@ -116,18 +115,29 @@ public class UserController {
     public Result<List<User>> searchUser(String username, HttpServletRequest httpServletRequest) {
         //仅管理员可查
         if (!isAdmin(httpServletRequest)) {
-            return ResultUtils.success(new ArrayList<>());
+            throw new BusinessEception(ErrorCode.NO_AUTH, "缺少管理员权限");
         }
 
-        if (StringUtils.isAnyBlank(username)) {
-            return ResultUtils.success(new ArrayList<>());
-        }
         LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<>();
-        lqw.like(User::getUsername, username);
-        List<User> list = userService.list(lqw);
+        if (StringUtils.isNotBlank(username)) {
+            lqw.like(User::getUsername, username);
+        }
+        List<User> userList = userService.list(lqw);
 
-        List<User> collect = list.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
-        return ResultUtils.success(collect);
+        List<User> NewUserList = userList.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(NewUserList);
+    }
+
+
+
+    @GetMapping("/recommend")
+    public Result<List<User>> recommendUser(HttpServletRequest httpServletRequest) {
+        LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<>();
+
+        List<User> userList = userService.list(lqw);
+
+        List<User> NewUserList = userList.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
+        return ResultUtils.success(NewUserList);
     }
 
     @PostMapping("/delete")

@@ -15,7 +15,7 @@ import xu.yuan.Common.ResultUtils;
 public class GloableEception {
     @ExceptionHandler(BusinessEception.class)
     public Result businessException(BusinessEception e) {
-        log.error("异常处理："+e);
+        log.error("异常处理："+e.getCode(),e.getMessage());
         return ResultUtils.error(e.getCode(), e.getMessage(), e.getDescription());
     }
 
