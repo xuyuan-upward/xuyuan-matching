@@ -198,6 +198,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setPlanetcode(user.getPlanetcode());
         safeUser.setUserstatus(user.getUserstatus());
         safeUser.setTags(user.getTags());
+        safeUser.setRole(user.getRole());
         return safeUser;
     }
     /**
