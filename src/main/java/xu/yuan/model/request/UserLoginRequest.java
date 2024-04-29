@@ -1,4 +1,4 @@
-package xu.yuan.model;
+package xu.yuan.model.request;
 
 import lombok.Data;
 

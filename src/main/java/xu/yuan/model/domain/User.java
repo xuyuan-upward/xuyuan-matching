@@ -1,4 +1,4 @@
-package xu.yuan.model;
+package xu.yuan.model.domain;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;

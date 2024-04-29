@@ -1,14 +1,14 @@
 package xu.yuan.service;
 
 import org.springframework.stereotype.Service;
-import xu.yuan.model.User;
+import xu.yuan.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
-* @author 肖广龙
+* @author 许苑
 * @description 针对表【user】的数据库操作Service
 * @createDate 2024-03-26 18:25:13
 */

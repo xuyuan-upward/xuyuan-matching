@@ -1,6 +1,6 @@
 package xu.yuan.Eception;
 import lombok.Data;
-import xu.yuan.Common.ErrorCode;
+import xu.yuan.enums.ErrorCode;
 
 /**
  * 自定义异常类

@@ -3,7 +3,7 @@ package xu.yuan.Eception;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import xu.yuan.Common.ErrorCode;
+import xu.yuan.enums.ErrorCode;
 import xu.yuan.Common.Result;
 import xu.yuan.Common.ResultUtils;
 

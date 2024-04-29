@@ -1,4 +1,4 @@
-package xu.yuan.Common;
+package xu.yuan.enums;
 
 /**
  * 全局错误码

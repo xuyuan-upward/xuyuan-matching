@@ -1,13 +1,11 @@
 package xu.yuan.service;
-import java.util.Date;
 
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import xu.yuan.model.User;
+import xu.yuan.model.domain.User;
 
-import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @Slf4j
 class UserServiceTest {

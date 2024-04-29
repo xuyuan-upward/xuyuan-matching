@@ -1,6 +1,6 @@
 package xu.yuan.Common;
 
-import com.sun.org.apache.bcel.internal.generic.NEW;
+import xu.yuan.enums.ErrorCode;
 
 public class ResultUtils {
     /**

@@ -1,6 +1,8 @@
 package xu.yuan.Common;
 
 import lombok.Data;
+import xu.yuan.enums.ErrorCode;
+
 import java.io.Serializable;
 
 /**

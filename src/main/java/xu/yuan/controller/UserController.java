@@ -1,24 +1,28 @@
 package xu.yuan.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
-import xu.yuan.Common.ErrorCode;
+import xu.yuan.enums.ErrorCode;
 import xu.yuan.Common.Result;
 import xu.yuan.Common.ResultUtils;
 import xu.yuan.Eception.BusinessEception;
-import xu.yuan.model.User;
-import xu.yuan.model.UserLoginRequest;
-import xu.yuan.model.UserRegisterRequest;
+import xu.yuan.model.domain.User;
+import xu.yuan.model.request.UserLoginRequest;
+import xu.yuan.model.request.UserRegisterRequest;
 import xu.yuan.service.UserService;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-
 import static xu.yuan.Constant.UserConstant.*;
 
 /**
@@ -26,11 +30,13 @@ import static xu.yuan.Constant.UserConstant.*;
  */
 @RestController
 @RequestMapping("/user")
+@Slf4j
 //允许这个IP跨域
 public class UserController {
     @Autowired
     private UserService userService;
-
+    @Resource
+    private RedisTemplate redisTemplate;
     /**
      * 用户注册
      *
@@ -129,15 +135,39 @@ public class UserController {
     }
 
 
-
+    /**
+     * 默认显示全部用户
+     * @param pageSize
+     * @param pageNum
+     * @param httpServletRequest
+     * @return
+     */
     @GetMapping("/recommend")
-    public Result<List<User>> recommendUser(HttpServletRequest httpServletRequest) {
+    public Result<Page<User>> recommendUser(long pageSize, long pageNum , HttpServletRequest httpServletRequest) {
+//        User logUser = userService.getLogUser(httpServletRequest);
+        ValueOperations<String,Object> redis = redisTemplate.opsForValue();
+        // key的命名
+//        String key = String.format("yupao:user:recommend:%s", logUser.getId());
+        String key = String.format("yupao:user:recommend");
+        // 查看是否有缓存
+        Page<User> pageList = (Page<User>) redis.get(key);
+        //有直接返回
+        if (pageList != null){
+            return ResultUtils.success(pageList);
+        }
+        //没有,查询数据库
         LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<>();
+        Page<User> page = new Page<>(pageSize,pageNum);
+        pageList = userService.page(page, lqw);
+        // 防止设置key时候错误还是返回数据``````
+        try {
+            //并写入redis中
+            redis.set(key,pageList,1, TimeUnit.MINUTES);
+        } catch (Exception e) {
+        log.info("redis set key: error {}",e);
+        }
 
-        List<User> userList = userService.list(lqw);
-
-        List<User> NewUserList = userList.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
-        return ResultUtils.success(NewUserList);
+        return ResultUtils.success(pageList);
     }
 
     @PostMapping("/delete")
@@ -158,7 +188,8 @@ public class UserController {
      * @param tagNameList
      * @return
      */
-
+    /*required = false 表示该参数是可选的，即它不是必需的。如果客户端请求没有提供
+    tagNameList 参数，Spring 将会将其值设为 null 或空列表（取决于具体的实现和配置）。*/
     @GetMapping("/search/tags")
     public Result<List<User>> SearchUserByTags(@RequestParam(required = false) List<String> tagNameList) {
         if (CollectionUtils.isEmpty(tagNameList)) {

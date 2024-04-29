@@ -10,9 +10,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
-import xu.yuan.Common.ErrorCode;
+import xu.yuan.enums.ErrorCode;
 import xu.yuan.Eception.BusinessEception;
-import xu.yuan.model.User;
+import xu.yuan.model.domain.User;
 import xu.yuan.service.UserService;
 import xu.yuan.mapper.UserMapper;
 import org.springframework.stereotype.Service;
@@ -27,7 +27,7 @@ import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
 import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
 
 /**
- * @author 肖广龙
+ * @author 许苑
  * @description 针对表【user】的数据库操作Service实现
  * @createDate 2024-03-26 18:25:13
  */
@@ -256,6 +256,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (oldUser == null){
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
+
         return userMapper.updateById(user);
     }
 
