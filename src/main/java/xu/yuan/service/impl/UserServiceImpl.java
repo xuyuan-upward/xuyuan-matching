@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,7 @@ import xu.yuan.model.domain.User;
 import xu.yuan.service.UserService;
 import xu.yuan.mapper.UserMapper;
 import org.springframework.stereotype.Service;
+import xu.yuan.utils.AlgorithmUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
@@ -45,42 +47,43 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 用户注册
+     *
      * @param userAccount
      * @param userPassword
      * @param checkPassword
      * @return
      */
     @Override
-    public long registerUser(String userAccount, String userPassword, String checkPassword,String planetCode) {
+    public long registerUser(String userAccount, String userPassword, String checkPassword, String planetCode) {
         //1.校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
-          throw new BusinessEception(ErrorCode.NULL_ERROR);
+            throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
         if (userAccount.length() < 4) {
-           throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名输入不合法");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名输入不合法");
         }
         if (userPassword.length() < 8) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"密码输入不合法");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "密码输入不合法");
         }
         if (planetCode.length() > 5) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"编号输入不合法");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "编号输入不合法");
         }
         String regEx = "[\\u00A0\\s\"`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Pattern p = Pattern.compile(regEx);
         Matcher m = p.matcher(userAccount);
 
         if (m.find()) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名输入不合法");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名输入不合法");
         }
         if (!userPassword.equals(checkPassword)) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"两次密码输入不一致");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "两次密码输入不一致");
         }
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount).or().eq(User::getPlanetcode,planetCode);
+        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount).or().eq(User::getPlanetcode, planetCode);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名或编号已经存在");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名或编号已经存在");
         }
 
 
@@ -92,7 +95,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setPlanetcode(planetCode);
         boolean save = this.save(user);
         if (!save) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户名或编号已经存在");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名或编号已经存在");
         }
         return user.getId();
 
@@ -100,6 +103,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 登录校验
+     *
      * @param userAccount
      * @param userPassword
      * @param
@@ -142,7 +146,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         httpServletRequest.getSession().setAttribute(USER_LOGIN_STATE, saftyUser);
         return saftyUser;
     }*/
-
     @Override
     public User doLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 1. 校验
@@ -175,17 +178,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         // 3. 用户脱敏
         User safetyUser = getSaftyUser(user);
-        // 4. 记录用户的登录态
+        // 4. 记录用户的登录态 此是session存放到了redis中
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
         return safetyUser;
     }
+
     /**
      * 用户返回前端脱敏
+     *
      * @param user
      * @return
      */
     @Override
-    public User getSaftyUser(User user){
+    public User getSaftyUser(User user) {
         //用户脱敏
         User safeUser = new User();
         safeUser.setId(user.getId());
@@ -201,6 +206,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setRole(user.getRole());
         return safeUser;
     }
+
     /**
      * 用户注销
      */
@@ -213,6 +219,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 内存使用
+     *
      * @param tagList
      * @return
      */
@@ -226,34 +233,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         List<User> userList = userMapper.selectList(wrapper);
         Gson gson = new Gson();
         //然后在内存中判断包含要求的标签
-       return  userList.stream().filter(user ->{
-                   String tags = user.getTags();
-                   Set<String> tempListags = gson.fromJson(tags, new TypeToken<Set<String>>() {
-                   }.getType());
-          //去封装可能为空的对象，如果为空返回new HashSet<>()给你
-           tempListags =  Optional.ofNullable(tempListags).orElse(new HashSet<>());
-                   for (String tag : tagList) {
-                       if (!tempListags.contains(tag)){
-                           return false;
-                       }
-                   }
-                   return true;
-               }).map(this::getSaftyUser).collect(Collectors.toList());
+        return userList.stream().filter(user -> {
+            String tags = user.getTags();
+            Set<String> tempListags = gson.fromJson(tags, new TypeToken<Set<String>>() {
+            }.getType());
+            //去封装可能为空的对象，如果为空返回new HashSet<>()给你
+            tempListags = Optional.ofNullable(tempListags).orElse(new HashSet<>());
+            for (String tag : tagList) {
+                if (!tempListags.contains(tag)) {
+                    return false;
+                }
+            }
+            return true;
+        }).map(this::getSaftyUser).collect(Collectors.toList());
     }
 
     @Override
     public int updateUser(User user, User logUser) {
         // 仅管理员和自己修改
         long userId = user.getId();
-        if (userId <=0){
+        if (userId <= 0) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
         // todo 如果传入一个id（就是没有其他数据修改时候会报错）
-        if (!isAdmin(logUser) && userId != logUser.getId()){
+        if (!isAdmin(logUser) && userId != logUser.getId()) {
             throw new BusinessEception(ErrorCode.NO_AUTH);
         }
         User oldUser = userMapper.selectById(userId);
-        if (oldUser == null){
+        if (oldUser == null) {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
 
@@ -262,18 +269,19 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     @Override
     public User getLogUser(HttpServletRequest request) {
-        if (request == null){
+        if (request == null) {
             return null;
         }
         User user = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (user == null){
+        if (user == null) {
             throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
-       return user;
+        return user;
     }
 
     /**
      * 判断是否为管理员
+     *
      * @param logUser
      * @return
      */
@@ -281,7 +289,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean isAdmin(User logUser) {
         // 如果是管理员
         return (logUser != null && logUser.getRole() == ADMIN_ROLE);
-}
+    }
+
     @Override
     public boolean isAdmin(HttpServletRequest httpServletRequest) {
         // 如果是管理员可查
@@ -292,7 +301,80 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
+     * 匹配对应的用户
+     *
+     * @param num
+     * @param logUser
+     * @return
+     */
+    @Override
+    public List<User> matchUsers(long num, User logUser) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.select("id", "tags", "avatarurl","planetcode","username");
+        wrapper.isNotNull("tags");
+        List<User> userList = this.list(wrapper);
+        String tags = logUser.getTags();
+        Gson gson = new Gson();
+        List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
+        }.getType());
+        // 用户列表的下标 => 相似度
+        // pair保存的是一对key value，而map可以保存多对key value。
+        // 即:pair => (1,3)    map => (1,3),(2,3),(3,3)
+        List<Pair<User, Long>> list = new ArrayList<>();
+        // 依次计算所有用户和当前用户的相似度
+        for (int i = 0; i < userList.size(); i++) {
+            User user = userList.get(i);
+            String userTags = user.getTags();
+            // 无标签或者标签为当前用户
+            if (StringUtils.isBlank(userTags) || user.getId() == logUser.getId()) {
+                continue;
+            }
+            List<String> usertagList = gson.fromJson(userTags, new TypeToken<List<String>>() {
+            }.getType());
+            // 计算分数 分数越小表明契合度越高 =>3, 4  表明3的代表的tags匹配契合度更高
+            long distance = AlgorithmUtils.minDistance(tagList, usertagList);
+            // 相当于计算所有用户的tags相似度
+            list.add(new Pair<>(user, distance));
+        }
+        // 按编辑距离由小到大排序
+        List<Pair<User, Long>> topUserrPairList = list.stream()
+                .sorted((a, b) -> (int) (a.getValue() - b.getValue())) // .sorted表示根据值进行排序
+                .limit(num)
+                .collect(Collectors.toList());
+        List<User> userVOlist = topUserrPairList.stream()
+                .map(Pair::getKey)       // map是用来进行类型转换的
+                .collect(Collectors.toList());
+        // 用户脱敏
+        List<User> users = userVOlist.stream()
+                .map(this::getSaftyUser)
+                .collect(Collectors.toList());
+
+        // 鱼皮的比较复杂:
+       /* // 原本编辑顺序的 userId列表
+        List<Long> userVOlist = topUserrPairList.stream()
+                .map(pair -> pair.getKey().getId())       // map是用来进行类型转换的
+                .collect(Collectors.toList());
+        // 用户脱敏
+        wrapper = new QueryWrapper<>();
+        // 根据userid查询出来所有的用户
+        wrapper.in("id", userVOlist);
+//        user -> getSaftyUser(user)
+        Map<Long, List<User>> longListMap = this.list(wrapper)
+                .stream()
+                .map(this::getSaftyUser)
+                .collect(Collectors.groupingBy(User::getId));
+        List<User> FinalUserList = new ArrayList<>();
+        // 作用是将排序好的 userVolist 取出来重新放入一个新的集合里面
+        for (Long userId : userVOlist) {
+            FinalUserList.add(longListMap.get(userId).get(0));
+        }*/
+        return users;
+
+    }
+
+    /**
      * sql
+     *
      * @param tagList
      * @return
      */
@@ -303,7 +385,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         QueryWrapper<User> wrapper = new QueryWrapper<>();
         for (String tagName : tagList) {
-            wrapper = wrapper.like("tags",tagName);
+            wrapper = wrapper.like("tags", tagName);
         }
         List<User> users = userMapper.selectList(wrapper);
         return users.stream().map(this::getSaftyUser).collect(Collectors.toList());

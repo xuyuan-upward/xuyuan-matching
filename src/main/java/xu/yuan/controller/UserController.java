@@ -31,7 +31,6 @@ import static xu.yuan.Constant.UserConstant.*;
 @RestController
 @RequestMapping("/user")
 @Slf4j
-//允许这个IP跨域
 public class UserController {
     @Autowired
     private UserService userService;
@@ -136,7 +135,7 @@ public class UserController {
 
 
     /**
-     * 默认显示全部用户
+     * 默认显示全部用户,使用了redisson
      * @param pageSize
      * @param pageNum
      * @param httpServletRequest
@@ -157,7 +156,7 @@ public class UserController {
         }
         //没有,查询数据库
         LambdaQueryWrapper<User> lqw = new LambdaQueryWrapper<>();
-        Page<User> page = new Page<>(pageSize,pageNum);
+        Page<User> page = new Page<>(pageNum,pageSize);
         pageList = userService.page(page, lqw);
         // 防止设置key时候错误还是返回数据``````
         try {
@@ -230,8 +229,15 @@ public class UserController {
         return ResultUtils.success(result);
 
         // 3.触发跟新
-
+    }
+@GetMapping("/match")
+    public Result<List<User>> matchUser(long num, HttpServletRequest request) {
+    if (num <= 0 || num > 20) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+    }
+      User logUser = userService.getLogUser(request);
+   List<User> userVoList = userService.matchUsers(num,logUser);
+        return ResultUtils.success(userVoList);
 
     }
-
 }

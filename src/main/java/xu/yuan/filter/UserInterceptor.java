@@ -1,3 +1,4 @@
+/*
 package xu.yuan.filter;
 
 import lombok.extern.slf4j.Slf4j;
@@ -26,4 +27,4 @@ public class UserInterceptor implements HandlerInterceptor {
         log.info("用户已经登录");
         return true;//返回true代表不拦截
     }
-}
+}*/

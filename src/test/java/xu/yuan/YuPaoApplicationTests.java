@@ -3,19 +3,26 @@ package xu.yuan;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.test.context.SpringBootTest;
-
+import xu.yuan.mapper.TeamMapper;
+import xu.yuan.model.domain.Team;
+import xu.yuan.service.TeamService;
 import javax.annotation.Resource;
-import java.util.Date;
 
 @SpringBootTest
 class YuPaoApplicationTests {
 
     @Resource
     private RedissonClient redissonClient;
+    @Resource
+    private TeamMapper teamMapper;
+    @Resource
+    private TeamService teamService;
     @Test
     void contextLoads() {
-
-
+        Team team = new Team();
+        team.setId(1L);
+        team.setDescription("dfdfd");
+        teamService.updateById(team);
     }
 
 }

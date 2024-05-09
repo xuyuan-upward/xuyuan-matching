@@ -1,18 +1,17 @@
-package xu.yuan.model.domain;
+package xu.yuan.model.vo;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
-import lombok.Data;
-
-/**
- * 队伍
- * @TableName team
- */
-@TableName(value ="team")  //表示将数据库team表映射到Team 且 一般mybatisplus是自动实现驼峰命名的,如果不需要可以关闭
 @Data
-public class Team implements Serializable {
+/**
+ * 包装后端每个队伍的信息
+ */
+public class TeamUserVo implements Serializable {
+    private static final long serialVersionUID = 3889051801937936429L;
     /**
      * id
      */
@@ -40,7 +39,7 @@ public class Team implements Serializable {
     private Date expireTime;
 
     /**
-     * 创建队伍的创建人id
+     * 用户id
      */
     private Long userId;
 
@@ -50,26 +49,27 @@ public class Team implements Serializable {
     private Integer status;
 
     /**
-     * 密码
-     */
-    private String password;
-
-    /**
      * 创建时间
      */
     private Date createTime;
 
     /**
-     * 
+     *
      */
     private Date updateTime;
 
     /**
-     * 是否删除
+     * 返回表信息和创建队伍用户的信息
      */
-    @TableLogic //逻辑删除
-    private Integer isDelete;
+  private UserVO createUser;
 
-    @TableField(exist = false)
-    private static final long serialVersionUID = 1L;
+    /**
+     * 是否已经加入队伍
+     */
+
+    private boolean hasJoin = false;
+
+
+
+    private int hasJoinNum ;
 }

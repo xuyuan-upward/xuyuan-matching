@@ -12,7 +12,7 @@ import java.util.Date;
  */
 @TableName(value ="team")
 @Data
-public class TeamRequest extends PageRequest {
+public class TeamAddRequest extends PageRequest {
 
     /**
      * 队伍名称
@@ -43,6 +43,8 @@ public class TeamRequest extends PageRequest {
      * 0 - 公开，1 - 私有，2 - 加密
      */
     private Integer status;
+
+    private String password;
 
 
 }

@@ -24,9 +24,9 @@ public class GloableEception {
      * @param e
      * @return
      */
-    @ExceptionHandler(RuntimeException.class)
+   /* @ExceptionHandler(RuntimeException.class)
     public Result runtimeException(RuntimeException e) {
         return ResultUtils.error(ErrorCode.SYSTEM,"系统运行时异常");
     }
-
+*/
 }

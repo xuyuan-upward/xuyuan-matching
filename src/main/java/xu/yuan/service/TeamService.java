@@ -3,6 +3,13 @@ package xu.yuan.service;
 import xu.yuan.model.domain.Team;
 import com.baomidou.mybatisplus.extension.service.IService;
 import xu.yuan.model.domain.User;
+import xu.yuan.model.dto.TeamQuery;
+import xu.yuan.model.request.TeamJoinRequest;
+import xu.yuan.model.request.TeamQuitRequest;
+import xu.yuan.model.request.TeamUpdateRequest;
+import xu.yuan.model.vo.TeamUserVo;
+
+import java.util.List;
 
 /**
 * @author 许苑
@@ -18,4 +25,31 @@ public interface TeamService extends IService<Team> {
      * @return
      */
     long addTeam(Team team, User loginUser);
+
+
+    List<TeamUserVo> listTeams(TeamQuery teamQuery,boolean isAdmin);
+
+    /**
+     * 修改队伍信息
+     * @param teamUpdateRequest
+     * @return
+     */
+    boolean updateTeam(TeamUpdateRequest teamUpdateRequest, User loginUser);
+
+    /**
+     * 队伍加入是否成功
+     * @param teamJoinRequest
+     * @return
+     */
+    boolean joinTeam(TeamJoinRequest teamJoinRequest,User loginUser);
+
+    /**
+     * 退出队伍
+     * @param teamQuitRequest
+     * @param logUser
+     * @return
+     */
+    boolean quitTeam(TeamQuitRequest teamQuitRequest, User logUser);
+
+    boolean deleteTeam(long teamId, User loginUser);
 }

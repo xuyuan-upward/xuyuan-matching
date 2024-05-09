@@ -7,6 +7,7 @@ import java.io.Serializable;
 public class PageRequest implements Serializable
 {
 
+    private static final long serialVersionUID = -1851146430521931277L;
     /**
      * 页面展示条数,并设置默认值
      */

@@ -17,7 +17,6 @@ public class InsertUsers {
      */
 //    @Scheduled
     public void doInsertUsers(){
-        final
         User user = new User();
         user.setUsername("假许苑");
         user.setUseraccount("fakexuyuan");
