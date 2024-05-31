@@ -37,10 +37,10 @@ knife4j:
   enable: true
   openapi:
     title: Knife4j官方文档
-    description: "`我是测试`,**你知道吗**
+    description: 我是许苑向上
     # aaa"
-    email: xiaoymin@foxmail.com
-    concat: 八一菜刀
+    email: 2517115657@qq.com
+    concat: 一心向上
     url: https://docs.xiaominfo.com
     version: v4.0
     license: Apache 2.0
@@ -52,3 +52,34 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - xu.yuan.controller
+#  smsProperties.getRegionId(),
+#  smsProperties.getAccessKey(),
+#  smsProperties.getSecretKey()
+#  );
+#  IAcsClient client = new DefaultAcsClient(profile);
+#  SendSmsRequest request = new SendSmsRequest();
+#  request.setPhoneNumbers(phoneNum);
+#  String signName = smsProperties.getSignName();
+#  request.setSignName(smsProperties.getSignName());
+#  String templateCode = smsProperties.getTemplateCode();
+#  request.setTemplateCode(smsProperties.getTemplateCode());
+xuyuan:
+  useShort-messagingService: false
+  sms:
+    region-id: cn-hangzhou
+    access-key: LTAI5tDh562VY733fnLjKdGq
+    secret-key: L5bRGjep2jLAuq6NVeB5raS7Rf7DfK
+    sign-name: 许苑园
+    template-code: SMS_465640342
+  oos:
+    end-point: oss-cn-beijing.aliyuncs.com
+    access-key: LTAI5tDh562VY733fnLjKdGq
+    secret-key: L5bRGjep2jLAuq6NVeB5raS7Rf7DfK
+    bucket-name: xuyuan-up-matching
+#  # 阿里云oss
+#  aliyun:
+#    oss:
+#      endpoint: 你自己阿里云账户的endpoint，例如：https://oss-cn-beijing.aliyuncs.com
+#      accessKeyId: 你自己阿里云账户的accessKeyId
+#      accessKeySecret: 你自己阿里云账户的accessKeySecret
+#      bucketName: 你自己阿里云账户的bucketName

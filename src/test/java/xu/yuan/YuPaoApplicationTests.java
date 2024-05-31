@@ -1,5 +1,6 @@
 package xu.yuan;
 
+import cn.hutool.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,5 +25,10 @@ class YuPaoApplicationTests {
         team.setDescription("dfdfd");
         teamService.updateById(team);
     }
-
+    @Test
+    void test(){
+        JSONObject jsonObject = new JSONObject();
+        JSONObject set = jsonObject.set("quyuh", "fdjfd");
+        System.out.println(set.toString());
+    }
 }

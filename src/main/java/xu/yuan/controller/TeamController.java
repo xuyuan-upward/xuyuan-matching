@@ -3,6 +3,9 @@ package xu.yuan.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -117,6 +120,7 @@ public class TeamController {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
           User logUser = userService.getLogUser(request);
+
         QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
         wrapper.eq("userId", logUser.getId());
         List<UserTeam> userTeamList = userTeamService.list(wrapper);
@@ -131,6 +135,24 @@ public class TeamController {
         teamQuery.setTeamId(idList);
         List<TeamUserVo> teamUserVos = teamService.listTeams(teamQuery, true);
         return ResultUtils.success(teamUserVos);
+    }
+    /**
+     * 列出所有我加入团队
+     *
+     * @param request 请求
+     * @return {@link }<{@link List}<{@link }>>
+     */
+    @GetMapping("/list/my/join/all")
+    @ApiOperation(value = "获取我加入的队伍")
+    @ApiImplicitParams({@ApiImplicitParam(name = "teamQuery", value = "获取队伍请求参数"),
+            @ApiImplicitParam(name = "request", value = "request请求")})
+    public Result<List<TeamUserVo>> listAllMyJoinTeams(HttpServletRequest request) {
+        User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
+        List<TeamUserVo> teamVOList = teamService.listAllMyJoin(loginUser.getId());
+        return ResultUtils.success(teamVOList);
     }
 
     /**
@@ -157,6 +179,7 @@ public class TeamController {
         if (teamQuery == null) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
+
         boolean isAdmin = userService.isAdmin(request);
         // 1、查询各个队伍列表 根据teamQuery传递的各种参数进行模糊查询
         List<TeamUserVo> teamList = teamService.listTeams(teamQuery, true);

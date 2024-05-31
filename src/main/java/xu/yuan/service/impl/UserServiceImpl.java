@@ -9,6 +9,7 @@ import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
 import xu.yuan.enums.ErrorCode;
@@ -18,13 +19,17 @@ import xu.yuan.service.UserService;
 import xu.yuan.mapper.UserMapper;
 import org.springframework.stereotype.Service;
 import xu.yuan.utils.AlgorithmUtils;
+import xu.yuan.utils.AliOSSUtils;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static xu.yuan.Common.SystemCommon.REGISTER_CODE_KEY;
+import static xu.yuan.Common.SystemCommon.USER_FORGET_PASSWORD_KEY;
 import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
 import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
 
@@ -44,7 +49,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     private static final String SALT = "xuyuan";
     @Autowired
     private UserMapper userMapper;
-
+    @Resource
+    private RedisTemplate redisTemplate;
+    @Resource
+    private AliOSSUtils aliOSSUtils;
     /**
      * 用户注册
      *
@@ -54,9 +62,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return
      */
     @Override
-    public long registerUser(String userAccount, String userPassword, String checkPassword, String planetCode) {
+    public long registerUser(String userAccount, String userPassword, String checkPassword, String userName,String phone,String code) {
         //1.校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, planetCode)) {
+        if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
         if (userAccount.length() < 4) {
@@ -65,9 +73,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (userPassword.length() < 8) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "密码输入不合法");
         }
-        if (planetCode.length() > 5) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "编号输入不合法");
-        }
+
         String regEx = "[\\u00A0\\s\"`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Pattern p = Pattern.compile(regEx);
         Matcher m = p.matcher(userAccount);
@@ -78,12 +84,17 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (!userPassword.equals(checkPassword)) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "两次密码输入不一致");
         }
+        //校验验证码
+        String rightCode = (String) redisTemplate.opsForValue().get(REGISTER_CODE_KEY + phone);
+        if (!rightCode.equals(code)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "验证码错误");
+        }
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount).or().eq(User::getPlanetcode, planetCode);
+        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名或编号已经存在");
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名已经存在");
         }
 
 
@@ -92,7 +103,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUseraccount(userAccount);
         user.setUserpassword(encryptPassword);
-        user.setPlanetcode(planetCode);
+        user.setPhone(phone);
+        user.setUsername(userName);
         boolean save = this.save(user);
         if (!save) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名或编号已经存在");
@@ -310,13 +322,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public List<User> matchUsers(long num, User logUser) {
         QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.select("id", "tags", "avatarurl","planetcode","username");
+        wrapper.select("id", "tags", "avatarurl", "planetcode", "username");
         wrapper.isNotNull("tags");
         List<User> userList = this.list(wrapper);
         String tags = logUser.getTags();
         Gson gson = new Gson();
         List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
         }.getType());
+        List<User> users = null;
+        if (CollectionUtils.isEmpty(tagList)) {
+            int i = 0;
+            for (User user : userList) {
+                if (user.getId() == logUser.getId()) {
+                    userList.remove(i);
+                    break;
+                }
+                i++;
+            }
+            users = userList;
+            return users;
+        }
         // 用户列表的下标 => 相似度
         // pair保存的是一对key value，而map可以保存多对key value。
         // 即:pair => (1,3)    map => (1,3),(2,3),(3,3)
@@ -345,7 +370,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 .map(Pair::getKey)       // map是用来进行类型转换的
                 .collect(Collectors.toList());
         // 用户脱敏
-        List<User> users = userVOlist.stream()
+        users = userVOlist.stream()
                 .map(this::getSaftyUser)
                 .collect(Collectors.toList());
 
@@ -369,6 +394,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             FinalUserList.add(longListMap.get(userId).get(0));
         }*/
         return users;
+
+    }
+
+    @Override
+    public void updateTags(List<String> tags, long id) {
+        User user = new User();
+        Gson gson = new Gson();
+        String userTags = gson.toJson(tags);
+        System.out.println(userTags);
+        user.setTags(userTags);
+        user.setId(id);
+        boolean flag = this.updateById(user);
+        if (!flag) {
+            throw new BusinessEception(ErrorCode.SYSTEM);
+        }
+    }
+
+    /**
+     * 发送验证码或者修改密码
+     * @param phone
+     * @param
+     * @param password
+     * @param confirmPassword
+     */
+    @Override
+    public void  updatePassword(String phone, String password, String confirmPassword,HttpServletRequest request) {
+        if (!password.equals(confirmPassword)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+        }
+//        String key = USER_FORGET_PASSWORD_KEY + phone;
+//
+//        String correctCode = (String) redisTemplate.opsForValue().get(key);
+        // 这一步可以直接省略
+//
+//        if (!correctCode.equals(code)) {
+//            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误");
+//        }
+        // 1.根据当前手机号查询当前用户
+//        LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
+//        userLambdaQueryWrapper.eq(User::getPhone, phone);
+//        User user = this.getOne(userLambdaQueryWrapper);
+        // 2.根据当前登录用户查找当前信息
+        User logUser = this.getLogUser(request);
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
+        logUser.setUserpassword(encryptPassword);
+        this.updateById(logUser);
+        // 用户注销
+        int i = userLogout(request);
+        if (i < 0) {
+            throw new BusinessEception(ErrorCode.SYSTEM,"系统异常");
+        }
 
     }
 

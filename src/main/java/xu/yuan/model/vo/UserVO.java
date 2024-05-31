@@ -3,6 +3,7 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
+// VO类型一般是用来返回给前端的数据类型
 @Data
 public class UserVO implements Serializable {
     /**

@@ -21,7 +21,7 @@ public class GloableEception {
 
     /**
      * 系统异常
-     * @param e
+     * @param
      * @return
      */
    /* @ExceptionHandler(RuntimeException.class)

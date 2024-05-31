@@ -6,14 +6,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
-import org.redisson.api.RAtomicLong;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import xu.yuan.Common.Result;
-import xu.yuan.Common.ResultUtils;
 import xu.yuan.enums.ErrorCode;
 import xu.yuan.Eception.BusinessEception;
 import xu.yuan.enums.TeamStatusEnum;
@@ -37,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static xu.yuan.Constant.JoinTeamConstant.*;
 
@@ -58,7 +56,6 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     private RedissonClient redissonClient;
     @Resource
     private Redisson redisson;
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, User loginUser) {
@@ -182,16 +179,16 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             }
             // 根据状态来查询
             Integer status = teamQuery.getStatus();
+
             TeamStatusEnum statusEnum = TeamStatusEnum.getTeamStatusEnum(status);
             if (statusEnum == null) {
-                statusEnum = TeamStatusEnum.PUBLIC;
+                throw  new BusinessEception(ErrorCode.SYSTEM);
             }
+            // 不是管理员 当前状态也是
             if (!isAdmin && statusEnum.equals(TeamStatusEnum.PRIVATE)) {
                 throw new BusinessEception(ErrorCode.NO_AUTH);
             }
             queryWrapper.eq("status", statusEnum.getStatus());
-
-
         }
 
 
@@ -419,6 +416,31 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             throw new BusinessEception(ErrorCode.SYSTEM, "删除队伍信息失败");
         }
         return deleteTeam;
+    }
+
+    /**
+     * 获取我所有参加入的队伍
+     * @param userId 当前用户的id
+     * @return
+     */
+    @Override
+    public List<TeamUserVo> listAllMyJoin(long userId) {
+        //根据id得出用户参加的队伍user_team 中的teamid
+        LambdaQueryWrapper<UserTeam> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserTeam::getUserId,userId);
+        // map就是将每个对象转换成对应引用方法的返回值
+        List<Long> teamIds = userTeamService.list(wrapper).stream().map(UserTeam::getTeamId).collect(Collectors.toList());
+        // 如果不存在则报错
+        if (teamIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Team> teams = this.listByIds(teamIds);
+        return teams.stream().map((team) ->{
+            TeamUserVo teamUserVo = new TeamUserVo();
+            BeanUtils.copyProperties(team,teamUserVo);
+            teamUserVo.setHasJoin(true);
+            return teamUserVo;
+        }).collect(Collectors.toList());
     }
 
 

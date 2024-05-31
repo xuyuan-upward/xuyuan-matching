@@ -23,8 +23,9 @@ public interface UserService extends IService<User> {
      * @param checkPassword
      * @return
      */
-    long registerUser(String userAccount ,String userPassword ,String checkPassword,String planetCode);
-
+    long registerUser(String userAccount ,String userPassword
+            ,String checkPassword
+            ,String userName,String phone,String code);
     /**
      *  用户登录校验
      * @param userAccount
@@ -64,4 +65,9 @@ public interface UserService extends IService<User> {
     public boolean isAdmin(HttpServletRequest httpServletRequest);
 
     List<User> matchUsers(long num, User logUser);
+
+    void updateTags(List<String> tags, long id);
+
+    void updatePassword(String phone, String password, String confirmPassword,HttpServletRequest request);
 }
+

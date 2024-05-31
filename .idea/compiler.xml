@@ -11,13 +11,7 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="user_center" target="1.8" />
       <module name="yupao-backend" target="1.8" />
     </bytecodeTargetLevel>
-  </component>
-  <component name="JavacSettings">
-    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="user_center" options="" />
-    </option>
   </component>
 </project>
