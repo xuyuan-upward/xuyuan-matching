@@ -1,7 +1,6 @@
 package xu.yuan.websocekt;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -254,7 +253,7 @@ public class WebSocket {
     /**
      * 消息
      *
-     * @param message 消息
+     * @param message 前端请求的消息参数
      * @param userId  用户id
      */
     @OnMessage
@@ -361,6 +360,7 @@ public class WebSocket {
             chatMessageVo.setIsMy(true);
         }
         String toJson = new Gson().toJson(chatMessageVo);
+        log.info("toJson为:{}",toJson);
         sendAllMessage(toJson);
         saveChat(user.getId(), null, text, null, chatType);
         chatService.deleteKey(CACHE_CHAT_HALL, String.valueOf(user.getId()));
@@ -464,6 +464,7 @@ public class WebSocket {
         if (userSession != null && userSession.isOpen()) {
             try {
                 synchronized (userSession) {
+                    // 此时像浏览器端发送数据
                     userSession.getBasicRemote().sendText(message);
                 }
             } catch (Exception e) {

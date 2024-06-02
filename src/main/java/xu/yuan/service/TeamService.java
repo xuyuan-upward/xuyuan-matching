@@ -4,9 +4,11 @@ import xu.yuan.model.domain.Team;
 import com.baomidou.mybatisplus.extension.service.IService;
 import xu.yuan.model.domain.User;
 import xu.yuan.model.dto.TeamQuery;
+import xu.yuan.model.request.ChatRequest;
 import xu.yuan.model.request.TeamJoinRequest;
 import xu.yuan.model.request.TeamQuitRequest;
 import xu.yuan.model.request.TeamUpdateRequest;
+import xu.yuan.model.vo.ChatMessageVO;
 import xu.yuan.model.vo.TeamUserVo;
 
 import java.util.List;
@@ -59,4 +61,5 @@ public interface TeamService extends IService<Team> {
      * @return
      */
     List<TeamUserVo> listAllMyJoin(long id);
+
 }

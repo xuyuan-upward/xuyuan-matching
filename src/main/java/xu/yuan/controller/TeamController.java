@@ -174,6 +174,12 @@ public class TeamController {
         return ResultUtils.success(teamUserVos);
     }
 
+    /**
+     * 获取公开或者加密的队伍
+     * @param teamQuery
+     * @param request
+     * @return
+     */
     @GetMapping("/list")
     public Result<List<TeamUserVo>> listTeams(TeamQuery teamQuery, HttpServletRequest request) {
         if (teamQuery == null) {

@@ -199,7 +199,7 @@ public class UserController {
         // 防止设置key时候错误还是返回数据``````
         try {
             //并写入redis中
-            redis.set(key, pageList, 1, TimeUnit.MINUTES);
+            redis.set(key, pageList, 30, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.info("redis set key: error {}", e);
         }

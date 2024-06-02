@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.redisson.Redisson;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import xu.yuan.enums.ErrorCode;
@@ -18,9 +18,11 @@ import xu.yuan.model.domain.Team;
 import xu.yuan.model.domain.User;
 import xu.yuan.model.domain.UserTeam;
 import xu.yuan.model.dto.TeamQuery;
+import xu.yuan.model.request.ChatRequest;
 import xu.yuan.model.request.TeamJoinRequest;
 import xu.yuan.model.request.TeamQuitRequest;
 import xu.yuan.model.request.TeamUpdateRequest;
+import xu.yuan.model.vo.ChatMessageVO;
 import xu.yuan.model.vo.TeamUserVo;
 import xu.yuan.model.vo.UserVO;
 import xu.yuan.service.TeamService;
@@ -36,6 +38,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static xu.yuan.Constant.ChatConstant.CACHE_CHAT_TEAM;
 import static xu.yuan.Constant.JoinTeamConstant.*;
 
 /**
@@ -54,8 +57,9 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
     private UserService userService;
     @Resource
     private RedissonClient redissonClient;
+
     @Resource
-    private Redisson redisson;
+    private RedisTemplate redisTemplate;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, User loginUser) {
@@ -442,6 +446,8 @@ public class TeamServiceImpl extends ServiceImpl<TeamMapper, Team>
             return teamUserVo;
         }).collect(Collectors.toList());
     }
+
+
 
 
     /**

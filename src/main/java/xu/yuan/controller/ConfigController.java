@@ -40,6 +40,8 @@ private UserService userService;
         User logUser = userService.getLogUser(request);
         logUser.setAvatarurl(imgURL);
         userService.updateById(logUser);
+        // 删除redis缓存
+
         return ResultUtils.success(imgURL);
     }
 }

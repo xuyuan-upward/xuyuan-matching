@@ -15,14 +15,13 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class TeamQuery extends PageRequest  {
-
     /**
      * id
      */
     @TableId(type = IdType.AUTO)
     private Long id;
-
     /**
+
      *  获取当前用户所有加入队伍的teamId
      */
     private List<Long> teamId;
