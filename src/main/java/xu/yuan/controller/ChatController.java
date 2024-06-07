@@ -14,7 +14,6 @@ import xu.yuan.model.request.ChatRequest;
 import xu.yuan.model.vo.ChatMessageVO;
 import xu.yuan.model.vo.PrivateChatVO;
 import xu.yuan.service.ChatService;
-import xu.yuan.service.TeamService;
 import xu.yuan.service.UserService;
 
 import javax.annotation.Resource;
@@ -134,4 +133,5 @@ public class ChatController {
         List<PrivateChatVO> userList = chatService.getPrivateList(loginUser.getId());
         return ResultUtils.success(userList);
     }
+
 }

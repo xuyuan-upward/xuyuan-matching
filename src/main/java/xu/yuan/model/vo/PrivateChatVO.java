@@ -47,7 +47,7 @@ public class PrivateChatVO implements Serializable, Comparable<PrivateChatVO> {
      * 最后一条消息日期
      */
     @ApiModelProperty(value = "最后消息日期")
-    private Date lastMessageDate;
+    private String lastMessageDate;
 
     /**
      * 未读消息数量

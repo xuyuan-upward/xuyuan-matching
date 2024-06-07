@@ -1,25 +1,22 @@
 package xu.yuan.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import xu.yuan.model.domain.Team;
 import com.baomidou.mybatisplus.extension.service.IService;
 import xu.yuan.model.domain.User;
-import xu.yuan.model.dto.TeamQuery;
-import xu.yuan.model.request.ChatRequest;
-import xu.yuan.model.request.TeamJoinRequest;
-import xu.yuan.model.request.TeamQuitRequest;
-import xu.yuan.model.request.TeamUpdateRequest;
-import xu.yuan.model.vo.ChatMessageVO;
+import xu.yuan.model.request.*;
 import xu.yuan.model.vo.TeamUserVo;
+import xu.yuan.model.vo.TeamVO;
+import xu.yuan.model.vo.UserVO;
 
 import java.util.List;
 
 /**
-* @author 许苑
+* @author 肖广龙
 * @description 针对表【team(队伍)】的数据库操作Service
-* @createDate 2024-04-29 11:07:17
+* @createDate 2024-06-07 17:13:26
 */
 public interface TeamService extends IService<Team> {
-
     /**
      * 校验,并创建用户
      * @param team
@@ -29,7 +26,6 @@ public interface TeamService extends IService<Team> {
     long addTeam(Team team, User loginUser);
 
 
-    List<TeamUserVo> listTeams(TeamQuery teamQuery,boolean isAdmin);
 
     /**
      * 修改队伍信息
@@ -43,7 +39,7 @@ public interface TeamService extends IService<Team> {
      * @param teamJoinRequest
      * @return
      */
-    boolean joinTeam(TeamJoinRequest teamJoinRequest,User loginUser);
+    boolean joinTeam(TeamJoinRequest teamJoinRequest, User loginUser);
 
     /**
      * 退出队伍
@@ -62,4 +58,29 @@ public interface TeamService extends IService<Team> {
      */
     List<TeamUserVo> listAllMyJoin(long id);
 
+    /**
+     * 获取队伍信息
+     * @param currentPage
+     * @param teamRequst
+     * @param admin
+     * @return
+     */
+    Page<TeamVO> listTeams(long currentPage, TeamRequst teamRequst, boolean admin);
+
+    /**
+     * 获取队伍加入者照片
+     * @param teamVoPage
+     * @return
+     */
+    Page<TeamVO> getJoinedUserAvatarUrl(Page<TeamVO> teamVoPage);
+
+    TeamVO getTeam(Long id, long id1);
+
+    List<UserVO> getTeamMember(Long id, long id1);
+
+
+    void kickOut(Long teamId, Long userId, long id, boolean admin);
+
+
+    void changeCoverImage(TeamUpdateAvart teamUpdateAvart, long id, boolean admin);
 }

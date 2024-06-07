@@ -1,4 +1,4 @@
-package xu.yuan.model.dto;
+package xu.yuan.model.request;
 
 import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
@@ -14,17 +14,17 @@ import java.util.List;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TeamQuery extends PageRequest  {
+public class TeamRequst extends PageRequest  {
     /**
-     * id
+     * 队伍id
      */
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
 
-     *  获取当前用户所有加入队伍的teamId
+     *  获取当前用户所有加入队伍的idList
      */
-    private List<Long> teamId;
+    private List<Long> idList;
     /**
      * 搜索关键词(同时对队伍名称和描述搜索)
      */
@@ -51,7 +51,7 @@ public class TeamQuery extends PageRequest  {
     private Date expireTime;
 
     /**
-     * 用户id
+     * 队长id
      */
     private Long userId;
 

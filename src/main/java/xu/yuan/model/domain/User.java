@@ -27,12 +27,12 @@ public class User implements Serializable{
     /**
      * 
      */
-    private String useraccount;
+    private String userAccount;
 
     /**
      * 
      */
-    private String avatarurl;
+    private String avatarUrl;
 
     /**
      * 
@@ -42,7 +42,7 @@ public class User implements Serializable{
     /**
      * 
      */
-    private String userpassword;
+    private String userPassword;
 
     /**
      * 
@@ -57,34 +57,38 @@ public class User implements Serializable{
     /**
      * 0--->表示正常状态
      */
-    private Integer userstatus;
+    private Integer userStatus;
 
     /**
      * 
      */
-    private Date createtime;
+    private Date createTime;
 
     /**
      * 
      */
-    private Date updatetime;
+    private Date updateTime;
 
     /**
      * 0---->表示删除
 
      */
     @TableLogic
-    private Integer isdelete;
+    private Integer isDelete;
 
     /**
      * 
      */
     private Integer role;
+    /**
+     * 个性签名
+     */
+    private String personality;
 
     /**
      * 星球编号
      */
-    private String planetcode;
+    private int planetCode;
 
     private String tags;
 

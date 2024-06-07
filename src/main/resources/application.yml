@@ -2,13 +2,13 @@ spring:
   application:
     name: yupao-backend
   datasource:
-    driver-class-name: com.mysql.jdbc.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     username: root
     password: 1234
     url: jdbc:mysql://localhost:3306/xuyuan
   # session 失效时间（分钟）
   session:
-    timeout: 86400  #表示一天过期
+    timeout: 8640  #表示一天过期
     store-type: redis
   mvc:
     pathmatch:

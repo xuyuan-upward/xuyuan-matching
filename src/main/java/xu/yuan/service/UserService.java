@@ -1,8 +1,10 @@
 package xu.yuan.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.stereotype.Service;
 import xu.yuan.model.domain.User;
 import com.baomidou.mybatisplus.extension.service.IService;
+import xu.yuan.model.vo.UserVO;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -56,7 +58,7 @@ public interface UserService extends IService<User> {
     int updateUser(User user, User logUser);
 
     /**
-     * 获取当前用户信息
+     * 获取当前登录用户信息 但是获取不到对应用户的信息
      */
     public User getLogUser(HttpServletRequest request);
 
@@ -64,10 +66,25 @@ public interface UserService extends IService<User> {
 
     public boolean isAdmin(HttpServletRequest httpServletRequest);
 
-    List<User> matchUsers(long num, User logUser);
+    /**
+     * 返回互相匹配的用户
+     * @param currentPage 表示第几页
+     * @param logUser
+     * @param username
+     * @return
+     */
+    Page<User> matchUsers(long currentPage, User logUser, String username);
 
     void updateTags(List<String> tags, long id);
 
     void updatePassword(String phone, String password, String confirmPassword,HttpServletRequest request);
+
+    /**
+     * 获取对应私聊用户的信息
+     * @param toId
+     * @param id
+     * @return
+     */
+    UserVO getUserById(Long toId, long id);
 }
 

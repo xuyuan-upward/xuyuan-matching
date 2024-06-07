@@ -40,20 +40,23 @@ import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
  */
 @Component
 @Slf4j
+// 私聊统一使用大厅那个websocket先
 @ServerEndpoint(value = "/websocket/{userId}/{teamId}", configurator = HttpSessionConfig.class)
 public class WebSocket {
     /**
      * 保存队伍的连接信息
+     * @prama ConcurrentHashMap<String, WebSocket>用来代表一个队伍的全部用户端
+     * @prama 键  String => 用来标志每个不同的队伍
      */
     private static final Map<String, ConcurrentHashMap<String, WebSocket>> ROOMS = new HashMap<>();
 
     /**
-     * 线程安全的无序的集合
+     * 线程安全的无序的集合，用来保存有多少个在线会话
      */
     private static final CopyOnWriteArraySet<Session> SESSIONS = new CopyOnWriteArraySet<>();
 
     /**
-     * 会话池
+     * 会话池 代表每个客户端与服务端都有一个唯一的Session维持这一次交互的会话
      */
     private static final Map<String, Session> SESSION_POOL = new HashMap<>(0);
     /**
@@ -70,7 +73,7 @@ public class WebSocket {
     private static TeamService teamService;
 
     /**
-     * 房间在线人数
+     * 房间在线人数 即为队伍在线人数
      */
     private static int onlineCount = 0;
 
@@ -80,7 +83,7 @@ public class WebSocket {
     private Session session;
 
     /**
-     * http会话
+     * http会话，每个WebSocket对象都有不同的http对话，即该属性是所有对象公用的
      */
     private HttpSession httpSession;
 
@@ -172,7 +175,7 @@ public class WebSocket {
     /**
      * 建立 连接，调用
      *
-     * @param session 会话
+     * @param session 会话 => 由WebSocket API自动传入
      * @param userId  用户id
      * @param teamId  团队id
      * @param config  配置
@@ -195,7 +198,9 @@ public class WebSocket {
                 this.session = session;
                 this.httpSession = userHttpSession;
             }
+            // 判断不是公共聊天室
             if (!"NaN".equals(teamId)) {
+                // 判断队伍是否存在 => 因为第一次只是通过request请求 还没有使用websocket
                 if (!ROOMS.containsKey(teamId)) {
                     ConcurrentHashMap<String, WebSocket> room = new ConcurrentHashMap<>(0);
                     room.put(userId, this);
@@ -210,9 +215,12 @@ public class WebSocket {
                     }
                 }
             } else {
+                // 用来存储总个数session会话
                 SESSIONS.add(session);
+                // 用来表示存储的是哪个用户的session会话
                 SESSION_POOL.put(userId, session);
                 // 给所有用户传播一个自己已经上线的信息
+                //TODO  此时没有显示在线功能可以不使用  后续可扩展显示在线人数
                 sendAllUsers();
             }
         } catch (Exception e) {
@@ -264,7 +272,7 @@ public class WebSocket {
 //        3、因此就有了websocket的‘心跳监测’。
 //        4、还有心跳，说明还活着，没有心跳说明已经断开了
 //        由前端发送
-        if ("PING".equals(message)) {
+        if ("ping".equals(message)) {
             sendOneMessage(userId, "pong");
             return;
         }
@@ -351,7 +359,7 @@ public class WebSocket {
         chatMessageVo.setFromUser(fromWebSocketVO);
         chatMessageVo.setText(text);
         chatMessageVo.setChatType(chatType);
-        chatMessageVo.setCreateTime(DateUtil.format(new Date(), "yyyy年MM月dd日 HH:mm:ss"));
+        chatMessageVo.setCreateTime(DateUtil.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
         if (user.getRole() == ADMIN_ROLE) {
             chatMessageVo.setIsAdmin(true);
         }
@@ -363,6 +371,7 @@ public class WebSocket {
         log.info("toJson为:{}",toJson);
         sendAllMessage(toJson);
         saveChat(user.getId(), null, text, null, chatType);
+        // 每次用户新发一次请求就，删除脏数据
         chatService.deleteKey(CACHE_CHAT_HALL, String.valueOf(user.getId()));
     }
 
@@ -474,7 +483,7 @@ public class WebSocket {
     }
 
     /**
-     *  创建所有客户端，并进行发送给所有的
+     *  创建所有客户端，并进行发送给所有的用户
      */
     public void sendAllUsers() {
         HashMap<String, List<WebSocketVO>> stringListHashMap = new HashMap<>(0);

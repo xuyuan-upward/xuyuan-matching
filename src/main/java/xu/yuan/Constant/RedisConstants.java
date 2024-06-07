@@ -9,14 +9,16 @@ package xu.yuan.Constant;
 public final class RedisConstants {
     private RedisConstants() {
     }
-
-    public static final String LOGIN_USER_KEY = "super:login:token:";
+    public static final String TEAM_LOCK_KEY = "team_lock";
+    public static final String USER_LOCK_KEY = "user_lock";
+    public static final int MAX_USER_TEAM_COUNT = 5;
+    public static final String LOGIN_USER_KEY = "xuyuan:login:token:";
 
     public static final Long LOGIN_USER_TTL = 15L;
     /**
      * 注册验证码键
      */
-    public static final String REGISTER_CODE_KEY = "super:register:";
+    public static final String REGISTER_CODE_KEY = "xuyuan:register:";
     /**
      * 注册验证码过期时间
      */
@@ -40,7 +42,7 @@ public final class RedisConstants {
     /**
      * 用户忘记密码键
      */
-    public static final String USER_FORGET_PASSWORD_KEY = "super:user:forget:";
+    public static final String USER_FORGET_PASSWORD_KEY = "xuyuan:user:forget:";
     /**
      * 用户忘记密码过期时间
      */
@@ -48,19 +50,23 @@ public final class RedisConstants {
     /**
      * 博客推送键
      */
-    public static final String BLOG_FEED_KEY = "super:feed:blog:";
+    public static final String BLOG_FEED_KEY = "xuyuan:feed:blog:";
     /**
      * 新博文消息键
      */
-    public static final String MESSAGE_BLOG_NUM_KEY = "super:message:blog:num:";
+    public static final String MESSAGE_BLOG_NUM_KEY = "xuyuan:message:blog:num:";
     /**
      * 新点赞消息键
      */
-    public static final String MESSAGE_LIKE_NUM_KEY = "super:message:like:num:";
+    public static final String MESSAGE_LIKE_NUM_KEY = "xuyuan:message:like:num:";
     /**
      * 用户推荐缓存
      */
-    public static final String USER_RECOMMEND_KEY = "super:recommend:";
+    public static final String USER_RECOMMEND_KEY = "xuyuan:recommend:";
+    /**
+     * 用户推荐缓存
+     */
+    public static final String USER_MATCH_KEY = "xuyuan:match:";
 
     /**
      * 最小缓存随机时间
@@ -74,4 +80,9 @@ public final class RedisConstants {
      * 缓存时间偏移
      */
     public static final int CACHE_TIME_OFFSET = 10;
+    /**
+     * recommand定期缓存时间
+     */
+    public static final String RECOMMAN_LAST_KEY = "yupao:user:recommend";
+
 }

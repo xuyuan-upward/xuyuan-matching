@@ -20,5 +20,33 @@ public class MybatisPlusConfig {
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor(DbType.MYSQL));
         return interceptor;
     }
-
+//
+//    @Bean
+//    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+//        SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
+//        sqlSessionFactoryBean.setDataSource(dataSource);
+//
+//        // 添加自定义插件
+//        org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
+//        configuration.addInterceptor(new CustomInterceptor());
+//        sqlSessionFactoryBean.setConfiguration(configuration);
+//        return sqlSessionFactoryBean.getObject();
+//    }
 }
+
+/*@Configuration
+public class MyBatisPlusConfig {
+
+    @Bean
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+        SqlSessionFactoryBean sqlSessionFactoryBean = new SqlSessionFactoryBean();
+        sqlSessionFactoryBean.setDataSource(dataSource);
+
+        // 添加自定义插件
+        org.apache.ibatis.session.Configuration configuration = new org.apache.ibatis.session.Configuration();
+        configuration.addInterceptor(new CustomInterceptor());
+        sqlSessionFactoryBean.setConfiguration(configuration);
+
+        return sqlSessionFactoryBean.getObject();
+    }
+}*/

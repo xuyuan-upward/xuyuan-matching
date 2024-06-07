@@ -1,4 +1,5 @@
 package xu.yuan.model.vo;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -60,16 +61,25 @@ public class UserVO implements Serializable {
      *
      */
     private Date updateTime;
-
-    /**
-     * 用户角色 0 - 普通用户 1 - 管理员
-     */
-    private Integer userRole;
-
     /**
      * 星球编号
      */
     private String planetCode;
+    /**
+     * 星球编号
+     */
+    private String personality;
 
+    /**
+     * 用户角色： 0 - 普通用户 1 - 管理员
+     */
+    @ApiModelProperty(value = "用户角色")
+    private Integer role;
+
+    /**
+     * 是否关注
+     */
+    @ApiModelProperty(value = "是否关注")
+    private Boolean isFollow;
     private static final long serialVersionUID = 1L;
 }

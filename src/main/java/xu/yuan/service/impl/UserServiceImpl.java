@@ -2,19 +2,26 @@ package xu.yuan.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.description.method.MethodDescription;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
+import xu.yuan.Constant.RedisConstants;
 import xu.yuan.enums.ErrorCode;
 import xu.yuan.Eception.BusinessEception;
+import xu.yuan.model.domain.Follow;
 import xu.yuan.model.domain.User;
+import xu.yuan.model.vo.UserVO;
+import xu.yuan.service.FollowService;
 import xu.yuan.service.UserService;
 import xu.yuan.mapper.UserMapper;
 import org.springframework.stereotype.Service;
@@ -24,12 +31,14 @@ import xu.yuan.utils.AliOSSUtils;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static xu.yuan.Common.SystemCommon.PAGE_SIZE;
 import static xu.yuan.Common.SystemCommon.REGISTER_CODE_KEY;
-import static xu.yuan.Common.SystemCommon.USER_FORGET_PASSWORD_KEY;
+import static xu.yuan.Constant.RedisConstants.USER_MATCH_KEY;
 import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
 import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
 
@@ -47,12 +56,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * 盐值，混淆
      */
     private static final String SALT = "xuyuan";
+    /**
+     * 用户服务
+     */
     @Autowired
     private UserMapper userMapper;
+    /**
+     * redis操作
+     */
     @Resource
     private RedisTemplate redisTemplate;
     @Resource
     private AliOSSUtils aliOSSUtils;
+    /**
+     * 关注服务
+     */
+    @Resource
+    private FollowService followService;
+
     /**
      * 用户注册
      *
@@ -62,7 +83,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @return
      */
     @Override
-    public long registerUser(String userAccount, String userPassword, String checkPassword, String userName,String phone,String code) {
+    public long registerUser(String userAccount, String userPassword, String checkPassword, String userName, String phone, String code) {
         //1.校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
@@ -91,7 +112,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount);
+        userLambdaQueryWrapper.eq(User::getUserAccount, userAccount);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名已经存在");
@@ -101,8 +122,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
         //插入数据
         User user = new User();
-        user.setUseraccount(userAccount);
-        user.setUserpassword(encryptPassword);
+        user.setUserAccount(userAccount);
+        user.setUserPassword(encryptPassword);
         user.setPhone(phone);
         user.setUsername(userName);
         boolean save = this.save(user);
@@ -191,6 +212,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 3. 用户脱敏
         User safetyUser = getSaftyUser(user);
         // 4. 记录用户的登录态 此是session存放到了redis中
+        // request.getSession()方法为每个用户请求创建或获取一个唯一的Session实例，
+        // 所以即使所有用户都设置了同样的attribute名称（如USER_LOGIN_STATE），
+        // 这些属性也是隔离的，存储在各自的Session中，通过Session ID区分，确保数据的独立性和准确性。
+
+        // 最重要的一点就是 没有使用redis存储每个用户的用户信息，为什么呢？因为每个session是隔离的，虽然键一样
+        // 但是每个sessionID是隔离的
         request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
         return safetyUser;
     }
@@ -207,15 +234,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User safeUser = new User();
         safeUser.setId(user.getId());
         safeUser.setUsername(user.getUsername());
-        safeUser.setUseraccount(user.getUseraccount());
-        safeUser.setAvatarurl(user.getAvatarurl());
+        safeUser.setUserAccount(user.getUserAccount());
+        safeUser.setAvatarUrl(user.getAvatarUrl());
         safeUser.setGender(user.getGender());
         safeUser.setPhone(user.getPhone());
         safeUser.setEmail(user.getEmail());
-        safeUser.setPlanetcode(user.getPlanetcode());
-        safeUser.setUserstatus(user.getUserstatus());
+        safeUser.setPlanetCode(user.getPlanetCode());
+        safeUser.setUserStatus(user.getUserStatus());
         safeUser.setTags(user.getTags());
         safeUser.setRole(user.getRole());
+        safeUser.setPersonality(user.getPersonality());
         return safeUser;
     }
 
@@ -313,89 +341,218 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
-     * 匹配对应的用户
+     * 匹配对应的心动用户
      *
-     * @param num
+     * @param currentPage 表示第几页
      * @param logUser
+     * @param username
      * @return
      */
     @Override
-    public List<User> matchUsers(long num, User logUser) {
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        wrapper.select("id", "tags", "avatarurl", "planetcode", "username");
-        wrapper.isNotNull("tags");
-        List<User> userList = this.list(wrapper);
-        String tags = logUser.getTags();
+    public Page<User> matchUsers(long currentPage, User logUser, String username) {
         Gson gson = new Gson();
-        List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
+        String MatchKey = USER_MATCH_KEY + logUser.getId() + currentPage;
+        Page<User> userPage;
+         String ToUserPageJson =   (String) redisTemplate.opsForValue().get(MatchKey);
+         userPage = gson.fromJson(ToUserPageJson, new TypeToken<Page<User>>() {
         }.getType());
-        List<User> users = null;
-        if (CollectionUtils.isEmpty(tagList)) {
-            int i = 0;
-            for (User user : userList) {
-                if (user.getId() == logUser.getId()) {
-                    userList.remove(i);
-                    break;
+        // 根据用户名匹配
+        if (StringUtils.isNotBlank(username)) {
+            userPage = getUserNameLike(currentPage, username, logUser);
+        }
+        //根据匹配算法进行匹配
+        else {
+            // 判断是否有缓存
+            if (redisTemplate.hasKey(MatchKey)) {
+            }
+            // 不存在缓存时候，去数据库找
+            else {
+                userPage = this.getMatchUsers(logUser, currentPage);
+                if (userPage.getRecords() != null) {
+                    // 转化成json数据保存到redis中去
+                    String toJsonPage = gson.toJson(userPage);
+                    redisTemplate.opsForValue().set(MatchKey,toJsonPage,2, TimeUnit.MINUTES);
                 }
-                i++;
             }
-            users = userList;
-            return users;
         }
-        // 用户列表的下标 => 相似度
-        // pair保存的是一对key value，而map可以保存多对key value。
-        // 即:pair => (1,3)    map => (1,3),(2,3),(3,3)
-        List<Pair<User, Long>> list = new ArrayList<>();
-        // 依次计算所有用户和当前用户的相似度
-        for (int i = 0; i < userList.size(); i++) {
-            User user = userList.get(i);
-            String userTags = user.getTags();
-            // 无标签或者标签为当前用户
-            if (StringUtils.isBlank(userTags) || user.getId() == logUser.getId()) {
-                continue;
-            }
-            List<String> usertagList = gson.fromJson(userTags, new TypeToken<List<String>>() {
-            }.getType());
-            // 计算分数 分数越小表明契合度越高 =>3, 4  表明3的代表的tags匹配契合度更高
-            long distance = AlgorithmUtils.minDistance(tagList, usertagList);
-            // 相当于计算所有用户的tags相似度
-            list.add(new Pair<>(user, distance));
-        }
-        // 按编辑距离由小到大排序
-        List<Pair<User, Long>> topUserrPairList = list.stream()
-                .sorted((a, b) -> (int) (a.getValue() - b.getValue())) // .sorted表示根据值进行排序
-                .limit(num)
-                .collect(Collectors.toList());
-        List<User> userVOlist = topUserrPairList.stream()
-                .map(Pair::getKey)       // map是用来进行类型转换的
-                .collect(Collectors.toList());
-        // 用户脱敏
-        users = userVOlist.stream()
-                .map(this::getSaftyUser)
-                .collect(Collectors.toList());
+        return userPage;
+    }
 
-        // 鱼皮的比较复杂:
-       /* // 原本编辑顺序的 userId列表
-        List<Long> userVOlist = topUserrPairList.stream()
-                .map(pair -> pair.getKey().getId())       // map是用来进行类型转换的
-                .collect(Collectors.toList());
-        // 用户脱敏
-        wrapper = new QueryWrapper<>();
-        // 根据userid查询出来所有的用户
-        wrapper.in("id", userVOlist);
-//        user -> getSaftyUser(user)
-        Map<Long, List<User>> longListMap = this.list(wrapper)
-                .stream()
-                .map(this::getSaftyUser)
-                .collect(Collectors.groupingBy(User::getId));
-        List<User> FinalUserList = new ArrayList<>();
-        // 作用是将排序好的 userVolist 取出来重新放入一个新的集合里面
-        for (Long userId : userVOlist) {
-            FinalUserList.add(longListMap.get(userId).get(0));
-        }*/
-        return users;
+    /**
+     * 获取分页心动用户
+     *
+     * @param logUser
+     * @param currentPage
+     * @return
+     */
+    private Page<User> getMatchUsers(User logUser, long currentPage) {
+
+        String tags = logUser.getTags();
+        if (StringUtils.isBlank(tags)) {
+            // 获取全部用户 根据分页
+            return this.getAllUser(currentPage);
+        }
+        // 获取心动值
+        List<Pair<User, Long>> matchUsers = getMatchUsers(tags, logUser);
+        // 获取最终结果
+        List<User> LastUserList = matchUsers.stream().map((pari) -> pari.getKey()).collect(Collectors.toList());
+        // 总记录数
+        long totalSize = LastUserList.size();
+        // 计算总页数，注意处理除不尽的情况，应向上取整
+        int totalPages = (int) Math.ceil((double) totalSize / PAGE_SIZE);
+        // 确保currentPage不超过总页数 并获取当前页数
+        if (currentPage > totalPages) {
+            return new Page<User>();
+        }
+
+        // 计算当前页的起始索引
+        int startIndex = (int) ((currentPage - 1) * PAGE_SIZE);
+// 获取当前页数据，注意处理索引越界问题
+        List<User> currentPageUsers;
+        if (startIndex >= totalSize) {
+            // 如果开始索引已经超过总记录数，说明没有更多数据了
+            currentPageUsers = Collections.emptyList();
+        } else {
+            int endIndex = (int) Math.min(startIndex + PAGE_SIZE, totalSize);
+            currentPageUsers = LastUserList.subList(startIndex, endIndex);
+        }
+        // 创建Page对象并设置属性
+        Page<User> userPage = new Page<>(currentPage, PAGE_SIZE);
+        userPage.setRecords(currentPageUsers);
+        userPage.setTotal(totalSize);
+        userPage.setPages(totalPages);
+        return userPage;
 
     }
+
+    /**
+     * 获取心动值键值对用户
+     *
+     * @param tags
+     * @param loginUser
+     * @return
+     */
+    private List<Pair<User, Long>> getMatchUsers(String tags, User loginUser) {
+        long loginUserId = loginUser.getId();
+        Gson gson = new Gson();
+        //获取登录用户的标签，并转换为list
+        List<String> LoginTags = gson.fromJson(tags, new TypeToken<List<String>>() {}.getType());
+        // 用来存放各个匹配用户的心动分数 User 心动分数
+        List<Pair<User, Long>> userMatchList = new ArrayList<>();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(User::getAvatarUrl,User::getPersonality,User::getAvatarUrl,User::getTags,User::getUserAccount,User::getUsername);
+        // 列出需要字段的所有用户
+        List<User> userList = this.list(wrapper);
+        for (User user : userList) {
+            String userTags = user.getTags();
+            List<String> tagsList = gson.fromJson(userTags, new TypeToken<List>() {
+            }.getType());
+            // 筛选掉空的标签和自己的标签
+            long userId = user.getId();
+            if (userId == loginUserId || (CollectionUtils.isEmpty(tagsList))) {
+                continue;
+            }
+            // 不是就进行心动匹配
+            Long distance = Long.valueOf(AlgorithmUtils.minDistance(LoginTags, tagsList));
+            userMatchList.add(new Pair<>(user, distance));
+        }
+        // 最终比较出来结果 匿名函数a,b 代表两个不同的Pair对象
+      return  userMatchList.stream().sorted((a, b) ->
+                (int) (a.getValue() - b.getValue())
+        ).collect(Collectors.toList());
+
+    }
+
+    /**
+     *  根据分页 获取全部用户
+     *
+     * @param currentPage
+     */
+    private Page<User> getAllUser(long currentPage) {
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        Page<User> page = this.page(new Page<>(currentPage, PAGE_SIZE), wrapper);
+        return page;
+    }
+
+    private Page<User> getUserNameLike(long currentPage, String username, User logUser) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 根据用户名进行匹配
+        wrapper.like(User::getUsername, username);
+        Page<User> userPageSize = this.page(new Page<User>(currentPage, PAGE_SIZE), wrapper);
+        return userPageSize;
+    }
+
+//    private Page<User> getUsers(long num, User logUser, List<User> userList, String tags) {
+//        Gson gson = new Gson();
+//        List<String> tagList = gson.fromJson(tags, new TypeToken<List<String>>() {
+//        }.getType());
+//        List<User> users = null;
+//        if (CollectionUtils.isEmpty(tagList)) {
+//            int i = 0;
+//            for (User user : userList) {
+//                if (user.getId() == logUser.getId()) {
+//                    userList.remove(i);
+//                    break;
+//                }
+//                i++;
+//            }
+//            users = userList;
+//            return null;
+//        }
+//        // 用户列表的下标 => 相似度
+//        // pair保存的是一对key value，而map可以保存多对key value。
+//        // 即:pair => (1,3)    map => (1,3),(2,3),(3,3)
+//        List<Pair<User, Long>> list = new ArrayList<>();
+//        // 依次计算所有用户和当前用户的相似度
+//        for (int i = 0; i < userList.size(); i++) {
+//            User user = userList.get(i);
+//            String userTags = user.getTags();
+//            // 无标签或者标签为当前用户
+//            if (StringUtils.isBlank(userTags) || user.getId() == logUser.getId()) {
+//                continue;
+//            }
+//            List<String> usertagList = gson.fromJson(userTags, new TypeToken<List<String>>() {
+//            }.getType());
+//            // 计算分数 分数越小表明契合度越高 =>3, 4  表明3的代表的tags匹配契合度更高
+//            long distance = AlgorithmUtils.minDistance(tagList, usertagList);
+//            // 相当于计算所有用户的tags相似度
+//            list.add(new Pair<>(user, distance));
+//        }
+//
+//        // 按编辑距离由小到大排序
+//        List<Pair<User, Long>> topUserrPairList = list.stream()
+//                .sorted((a, b) -> (int) (a.getValue() - b.getValue())) // .sorted表示根据值进行排序
+//                .limit(num)
+//                .collect(Collectors.toList());
+//        List<User> userVOlist = topUserrPairList.stream()
+//                .map(Pair::getKey)       // map是用来进行类型转换的
+//                .collect(Collectors.toList());
+//        // 用户脱敏
+//        users = userVOlist.stream()
+//                .map(this::getSaftyUser)
+//                .collect(Collectors.toList());
+//
+//        // 鱼皮的比较复杂:
+//       /* // 原本编辑顺序的 userId列表
+//        List<Long> userVOlist = topUserrPairList.stream()
+//                .map(pair -> pair.getKey().getId())       // map是用来进行类型转换的
+//                .collect(Collectors.toList());
+//        // 用户脱敏
+//        wrapper = new QueryWrapper<>();
+//        // 根据userid查询出来所有的用户
+//        wrapper.in("id", userVOlist);
+////        user -> getSaftyUser(user)
+//        Map<Long, List<User>> longListMap = this.list(wrapper)
+//                .stream()
+//                .map(this::getSaftyUser)
+//                .collect(Collectors.groupingBy(User::getId));
+//        List<User> FinalUserList = new ArrayList<>();
+//        // 作用是将排序好的 userVolist 取出来重新放入一个新的集合里面
+//        for (Long userId : userVOlist) {
+//            FinalUserList.add(longListMap.get(userId).get(0));
+//        }*/
+//        return users;
+//    }
 
     @Override
     public void updateTags(List<String> tags, long id) {
@@ -413,13 +570,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 发送验证码或者修改密码
+     *
      * @param phone
      * @param
      * @param password
      * @param confirmPassword
      */
     @Override
-    public void  updatePassword(String phone, String password, String confirmPassword,HttpServletRequest request) {
+    public void updatePassword(String phone, String password, String confirmPassword, HttpServletRequest request) {
         if (!password.equals(confirmPassword)) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
         }
@@ -438,14 +596,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 2.根据当前登录用户查找当前信息
         User logUser = this.getLogUser(request);
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
-        logUser.setUserpassword(encryptPassword);
+        logUser.setUserPassword(encryptPassword);
         this.updateById(logUser);
         // 用户注销
         int i = userLogout(request);
         if (i < 0) {
-            throw new BusinessEception(ErrorCode.SYSTEM,"系统异常");
+            throw new BusinessEception(ErrorCode.SYSTEM, "系统异常");
         }
 
+    }
+
+    /**
+     * 获取私聊对象信息
+     *
+     * @param toId
+     * @param userId
+     * @return
+     */
+    @Override
+    public UserVO getUserById(Long toId, long userId) {
+        // 获取私聊对象，托敏返回
+        LambdaQueryWrapper<Follow> wrpper = new LambdaQueryWrapper<>();
+        // 获取是否关注
+        wrpper.eq(Follow::getUserId, userId).eq(Follow::getFollowUserId, toId);
+        User toUser = this.getById(toId);
+        UserVO userVO = new UserVO();
+        // 脱敏拷贝
+        BeanUtils.copyProperties(toUser, userVO);
+        int count = followService.count(wrpper);
+        userVO.setIsFollow(count > 0);
+        return userVO;
     }
 
     /**

@@ -58,13 +58,23 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
     @Resource
     private TeamService teamService;
     /**
-     * 删除脏数据
-     * @param cacheChatTeam
-     * @param valueOf
+     * 从新发送数据时候，删除脏数据
+     * @param redisKey
+     * @param id
      */
     @Override
-    public void deleteKey(String cacheChatTeam, String valueOf) {
-
+    public void deleteKey(String redisKey, String id) {
+        try {
+            // 代表缓存大厅的数据
+            if (redisKey.equals(CACHE_CHAT_HALL)) {
+                redisTemplate.delete(redisKey);
+            } else {
+                //可能还需要缓存其他大厅用户的单独数据
+                redisTemplate.delete(redisKey + id);
+            }
+        } catch (Exception e) {
+            log.error("redis delete key Error");
+        }
     }
 
     /**
@@ -174,8 +184,8 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
             if (chat.getFromId().equals(loginUser.getId())) {
                 chatMessageVo.setIsMy(true);
             }
-            // TODO  DateUtil.format(chat.getCreateTime()来自hutool工具时间转化格式
-            chatMessageVo.setCreateTime(DateUtil.format(chat.getCreateTime(), "yyyy年MM月dd日 HH:mm:ss"));
+            // TODO  DateUtil.format(chat.getCreateTime()来自hutool工具时间转化格式 => 根据时间转化为对应的格式
+            chatMessageVo.setCreateTime(DateUtil.format(chat.getCreateTime(), "yyy-MM-dd HH:mm:ss"));
             return chatMessageVo;
         }).collect(Collectors.toList());
     }
@@ -275,12 +285,13 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         LambdaQueryWrapper<Chat> chatLambdaQueryWrapper = new LambdaQueryWrapper<>();
         chatLambdaQueryWrapper.eq(Chat::getChatType, teamChat).eq(Chat::getTeamId, teamId);
         List<ChatMessageVO> chatMessageVOS = returnMessage(loginUser, team.getUserId(), chatLambdaQueryWrapper);
+        // 由于第一次没有数据，获取到的数据存放到redis中去
         saveCache(CACHE_CHAT_TEAM, String.valueOf(teamId), chatMessageVOS);
         return chatMessageVOS;
     }
 
     /**
-     * 返回私人聊天信息表
+     * 返回私人聊天信息列表
      * @param id
      * @return
      */
@@ -311,29 +322,31 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         });
         // 统一得出关于我和其他人联系的所有信息
         List<User> userList = userService.listByIds(userIdSet);
-        return userList.stream().map((user) -> {
+        List<PrivateChatVO> privateChatVOS = userList.stream().map((user) -> {
             PrivateChatVO privateChatVO = new PrivateChatVO();
             privateChatVO.setUserId(user.getId());
             privateChatVO.setUsername(user.getUsername());
-            privateChatVO.setAvatarUrl(user.getAvatarurl());
+            privateChatVO.setAvatarUrl(user.getAvatarUrl());
             Pair<String, Date> pair = getPrivateLastMessage(Long.valueOf(id), user.getId());
             privateChatVO.setLastMessage(pair.getKey());
-            privateChatVO.setLastMessageDate(pair.getValue());
-            // 获取当前未读消息
+            privateChatVO.setLastMessageDate(DateUtil.format(pair.getValue(), "yyyy-MM-dd HH:mm:ss"));
+            // 获取当前未读消息pair.getValue()
 //            privateChatVO.setUnReadNum(getUnreadNum(, user.getId()));
             return privateChatVO;
         }).sorted().collect(Collectors.toList());
+        return privateChatVOS;
     }
 
     /**
      * 返回私人聊天记录
      * @param chatRequest
-     * @param privateChat
+     * @param chatType
      * @param loginUser
      * @return
      */
     @Override
     public List<ChatMessageVO> getPrivateChat(ChatRequest chatRequest, int chatType, User loginUser) {
+        // 获取发送方id
         Long toId = chatRequest.getToId();
         if (toId == null) {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
@@ -348,19 +361,20 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         // 缓存内没有数据时候直接从数据库取
         LambdaQueryWrapper<Chat> chatLambdaQueryWrapper = new LambdaQueryWrapper<>();
         chatLambdaQueryWrapper.
-                // sql => where ((getFromId = loginUser.getId() and getToId = toId ) or
-                //    (getFromId = toId and getToId = loginUser.getId()))  这两行都是属于一个括号内的内容
-                //    and  getChatType = chatType
+         // sql => where ((getFromId = loginUser.getId() and getToId = toId ) or
+         //(getFromId = toId and getToId = loginUser.getId()))  这两行都是属于一个括号内的内容
+         //and  getChatType = chatType
                 and(privateChat -> privateChat.eq(Chat::getFromId, loginUser.getId()).eq(Chat::getToId, toId)
                         .or().
                                 eq(Chat::getToId, loginUser.getId()).eq(Chat::getFromId, toId)
                 ).eq(Chat::getChatType, chatType);
-        // 两方共有聊天
+        // 两方共有聊天 获取有关这些我的所有信息
         List<Chat> list = this.list(chatLambdaQueryWrapper);
         List<ChatMessageVO> chatMessageVOList = list.stream().map(chat -> {
             ChatMessageVO chatMessageVo = chatResult(loginUser.getId(),
                     toId, chat.getText(), chatType,
                     chat.getCreateTime());
+            //判断是否是当前用户所发
             if (chat.getFromId().equals(loginUser.getId())) {
                 chatMessageVo.setIsMy(true);
             }

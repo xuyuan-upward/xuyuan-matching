@@ -1,6 +1,17 @@
 package xu.yuan.Common;
 
 public class SystemCommon {
+
+
+    /**
+     * 分页页数大小
+     */
+    public static final long PAGE_SIZE = 10;
+    /**
+     * 默认缓存页数
+     */
+    public static final int CACHE_PAGE = 5;
+
     /**
      * 最大验证码
      */
@@ -25,4 +36,10 @@ public class SystemCommon {
      * 注册验证码过期时间
      */
     public static final Long USER_FORGET_PASSWORD_CODE_TTL = 2L;
+  /**
+     * 队伍加入展示最多照片人数
+     */
+    public static final Long MAXIMUM_JOINED_USER_AVATAR_NUM = 3L;
+
+    
 }

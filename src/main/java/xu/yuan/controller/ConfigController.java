@@ -2,6 +2,7 @@ package xu.yuan.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -14,10 +15,10 @@ import xu.yuan.enums.ErrorCode;
 import xu.yuan.model.domain.User;
 import xu.yuan.service.UserService;
 import xu.yuan.utils.AliOSSUtils;
-
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import static xu.yuan.Constant.RedisConstants.RECOMMAN_LAST_KEY;
 
 @RestController
 @RequestMapping("/config")
@@ -27,6 +28,8 @@ public class ConfigController {
 private AliOSSUtils aliOSSUtils;
     @Autowired
 private UserService userService;
+    @Resource
+    private RedisTemplate redisTemplate;
     @PostMapping("/upload")
     public Result<String> upload(@RequestBody MultipartFile file,HttpServletRequest request){
         // 返回图片的地址
@@ -38,10 +41,10 @@ private UserService userService;
         }
         //  存放到数据库里面
         User logUser = userService.getLogUser(request);
-        logUser.setAvatarurl(imgURL);
+        logUser.setAvatarUrl(imgURL);
         userService.updateById(logUser);
         // 删除redis缓存
-
+        redisTemplate.delete(RECOMMAN_LAST_KEY);
         return ResultUtils.success(imgURL);
     }
 }

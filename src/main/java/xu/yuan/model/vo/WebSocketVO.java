@@ -31,12 +31,12 @@ public class WebSocketVO implements Serializable {
      * 账号
      */
     @ApiModelProperty(value = "用户账号")
-    private String useraccount;
+    private String userAccount;
 
     /**
      * 用户头像
      */
     @ApiModelProperty(value = "用户头像")
-    private String avatarurl;
+    private String avatarUrl;
 
 }
