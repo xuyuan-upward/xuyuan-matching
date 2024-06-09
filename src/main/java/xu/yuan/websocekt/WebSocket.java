@@ -36,7 +36,6 @@ import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
  * WebSocket聊天室
  *
  * @author xuyuan
- * @date 2023/06/22
  */
 @Component
 @Slf4j

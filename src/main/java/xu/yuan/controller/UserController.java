@@ -247,13 +247,13 @@ public class UserController {
     /*required = false 表示该参数是可选的，即它不是必需的。如果客户端请求没有提供
     tagNameList 参数，Spring 将会将其值设为 null 或空列表（取决于具体的实现和配置）。*/
     @GetMapping("/search/tags")
-    public Result<List<User>> SearchUserByTags(@RequestParam(required = false) List<String> tagNameList) {
-        if (CollectionUtils.isEmpty(tagNameList)) {
+    public Result<Page<UserVO>> SearchUserByTags(@RequestParam(required = false) List<String> tagNameList, long currentPage) {
+        if (CollectionUtils.isEmpty(tagNameList) || currentPage <=0) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
-        List<User> usersList = userService.searchUserByTag(tagNameList);
-        List<User> safetyUsers = usersList.stream().map(user -> userService.getSaftyUser(user)).collect(Collectors.toList());
-        return ResultUtils.success(safetyUsers);
+
+        Page<UserVO> usersList = userService.searchUserByTag(tagNameList,currentPage);
+        return ResultUtils.success(usersList);
 
     }
 

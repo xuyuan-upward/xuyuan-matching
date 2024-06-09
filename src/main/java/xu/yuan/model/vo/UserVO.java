@@ -79,7 +79,7 @@ public class UserVO implements Serializable {
     /**
      * 是否关注
      */
-    @ApiModelProperty(value = "是否关注")
+    @ApiModelProperty(value = "当前登录用户是否关注")
     private Boolean isFollow;
     private static final long serialVersionUID = 1L;
 }

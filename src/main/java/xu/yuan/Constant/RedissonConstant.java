@@ -3,8 +3,7 @@ package xu.yuan.Constant;
 /**
  * redisson常量
  *
- * @author OchiaMalu
- * @date 2023/06/22
+ * @author xuyuan
  */
 public final class RedissonConstant {
     private RedissonConstant() {

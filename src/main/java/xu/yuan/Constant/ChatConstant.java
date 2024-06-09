@@ -5,7 +5,6 @@ package xu.yuan.Constant;
  * 聊天常量
  *
  * @author xuyuan
- * @date 2023/06/22
  */
 public final class ChatConstant {
     private ChatConstant() {

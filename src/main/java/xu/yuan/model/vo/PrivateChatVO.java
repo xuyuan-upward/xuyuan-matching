@@ -10,8 +10,7 @@ import java.util.Date;
 /**
  * 私聊返回
  *
- * @author OchiaMalu
- * @date 2024/05/23
+ * @author xuyuan
  */
 @Data
 @ApiModel(value = "私聊返回")

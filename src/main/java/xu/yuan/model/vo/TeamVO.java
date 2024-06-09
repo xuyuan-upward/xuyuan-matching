@@ -11,8 +11,7 @@ import java.util.List;
 /**
  * 团队签证官
  *
- * @author OchiaMalu
- * @date 2023/06/22
+ * @author xuyuan
  */
 @Data
 @ApiModel(value = "队伍返回信息")
@@ -101,7 +100,7 @@ public class TeamVO implements Serializable {
     private boolean hasJoin = false;
 
     /**
-     * 加入用户的照片地址
+     * 加入用户的照片
      */
     private List<String> joinedUserAvatars;
 }

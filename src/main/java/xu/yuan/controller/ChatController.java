@@ -25,8 +25,7 @@ import static xu.yuan.Constant.ChatConstant.*;
 /**
  * 聊天控制器
  *
- * @author OchiaMalu
- * @date 2023/06/19
+ * @author xuyuan
  */
 @RestController
 @RequestMapping("/chat")

@@ -9,8 +9,7 @@ import java.io.Serializable;
 /**
  * 聊天请求
  *
- * @author OchiaMalu
- * @date 2023/06/22
+ * @author xuyuan
  */
 @Data
 @ApiModel(value = "用户队伍")

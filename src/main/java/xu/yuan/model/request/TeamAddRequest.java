@@ -44,6 +44,9 @@ public class TeamAddRequest extends PageRequest {
      */
     private Integer status;
 
+    /**
+     * 队伍的密码
+     */
     private String password;
 
 

@@ -5,8 +5,6 @@ import com.alibaba.excel.EasyExcel;
 import java.util.List;
 
 /**
- * @author: shayu
- * @date: 2022/11/20
  * @ClassName: yupao-backend01
  * @Description:    导入Excel，读取数据
  */

@@ -52,13 +52,6 @@ public interface TeamService extends IService<Team> {
     boolean deleteTeam(long teamId, User loginUser);
 
     /**
-     * 获取我所有加入的队伍
-     * @param id
-     * @return
-     */
-    List<TeamUserVo> listAllMyJoin(long id);
-
-    /**
      * 获取队伍信息
      * @param currentPage
      * @param teamRequst
@@ -83,4 +76,13 @@ public interface TeamService extends IService<Team> {
 
 
     void changeCoverImage(TeamUpdateAvart teamUpdateAvart, long id, boolean admin);
+
+
+    Page<TeamVO> getCreateUserWithTeam(long currentPage, long id, TeamRequst teamRequst);
+
+
+    Page<TeamVO> getCreateUserWithJoinTeam(long currentPage, long id, TeamRequst teamRequst);
+
+
+    List<TeamVO> MessagelistAllMyJoin(long id);
 }

@@ -33,10 +33,7 @@ import xu.yuan.utils.AliOSSUtils;
 
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -68,58 +65,25 @@ private AliOSSUtils aliOSSUtils;
     @Override
     @Transactional(rollbackFor = Exception.class)
     public long addTeam(Team team, User loginUser) {
-        //1. 请求参数是否为空？
-        if (team == null) {
-            throw new BusinessEception(ErrorCode.NULL_ERROR);
+        // 判断是否永久设置时间
+        if (team.getExpireTime() != null) {
+            Calendar calendar = Calendar.getInstance();
+            calendar.setTime(team.getExpireTime());
+            calendar.set(Calendar.HOUR_OF_DAY, 0);
+            calendar.set(Calendar.MINUTE, 0);
+            calendar.set(Calendar.SECOND, 0);
+            team.setExpireTime(calendar.getTime());
+        } else {
+            team.setExpireTime(null);
         }
         //2. 是否登录，未登录不允许创建(全局拦截处理器已经做了)
-        //3. 校验信息
-        //  a. 队伍人数 > 1 且 <= 20
-        int maxNum = team.getMaxnum();
-        if (maxNum < 1 || maxNum > 20) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
-        }
-        //  b. 队伍标题 <= 20
-        String name = team.getName();
-        if (StringUtils.isBlank(name) || name.length() > 20) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
-        }
-        //  c. 描述 <= 512
-        String description = team.getDescription();
-        if (description.length() > 512 || StringUtils.isBlank(description)) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
-        }
-        //  d. status 是否公开（int）不传默认为 0（公开）
-        int status = team.getStatus();
-        TeamStatusEnum teamStatusEnum = TeamStatusEnum.getTeamStatusEnum(status);
-        if (teamStatusEnum == null) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "队伍状态不满足要求");
-        }
-        //  e. 如果 status 是加密状态，一定要有密码，且密码 <= 32
-        String password = team.getPassword();
-        if (teamStatusEnum.equals(TeamStatusEnum.SECRETE)) {
-            if (StringUtils.isBlank(password) || password.length() > 32) {
-                throw new BusinessEception(ErrorCode.PARAMS_ERROR, "密码参数错误");
-            }
-        }
-        //  f. 超时时间 > 当前时间
-        Date expireTime = team.getExpiretime();
-        if (new Date().after(expireTime)) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "超时时间 > 当前时间");
-        }
-        //  g. 校验用户最多创建 5 个队伍
         //获取当前登录用户的id
         long userId = loginUser.getId();
-        // todo 有bug 多线程下会导致同时创建100个队伍
-        LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Team::getUserid, userId);
-        long count = this.count(wrapper);
-        if (count >= 5) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户最多创建5个队伍");
-        }
+        // 校验添加队伍规则
+        Verify(team,userId);
+        //  g. 校验用户最多创建 5 个队伍
         //4. 插入队伍信息到队伍表
-        team.setId(null);
-        team.setUserid(userId);
+        team.setUserId(userId);
         boolean save = this.save(team);
         if (!save) {
             throw new BusinessEception(ErrorCode.SYSTEM, "插入队伍失败");
@@ -127,7 +91,6 @@ private AliOSSUtils aliOSSUtils;
         //5. 插入用户 => 队伍关系到关系表
         Long teamId = team.getId();
         UserTeam userTeam = new UserTeam();
-        userTeam.setId(0L);
         userTeam.setUserId(userId);
         userTeam.setTeamId(teamId);
         userTeam.setJoinTime(new Date());
@@ -137,8 +100,56 @@ private AliOSSUtils aliOSSUtils;
         }
         return teamId;
     }
+    /**
+     * 校验添加队伍是否符合规则
+     * @param team
+     * @param userId 登录用户id
+     * @return
+     */
+private void Verify (Team team,long userId){
+    //3. 校验信息
+    //  a. 队伍人数 > 1 且 <= 20
+    int maxNum = team.getMaxNum();
+    if (maxNum < 1 || maxNum > 20) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+    }
+    //  b. 队伍标题 <= 20
+    String name = team.getName();
+    if (StringUtils.isBlank(name) || name.length() > 20) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+    }
+    //  c. 描述 <= 512
+    String description = team.getDescription();
+    if (description.length() > 512 || StringUtils.isBlank(description)) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+    }
+    //  d. status 是否公开（int）不传默认为 0（公开）
+    int status = team.getStatus();
+    TeamStatusEnum teamStatusEnum = TeamStatusEnum.getTeamStatusEnum(status);
+    if (teamStatusEnum == null) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR, "队伍状态不满足要求");
+    }
+    //  e. 如果 status 是加密状态，一定要有密码，且密码 <= 32
+    String password = team.getPassword();
+    if (teamStatusEnum.equals(TeamStatusEnum.SECRETE)) {
+        if (StringUtils.isBlank(password) || password.length() > 32) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "密码参数错误");
+        }
+    }
+    //  f. 超时时间 > 当前时间
+    Date expireTime = team.getExpireTime();
+    if (expireTime != null &&new Date().after(expireTime)  ) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR, "超时时间 > 当前时间");
+    }
 
-
+    // todo 有bug 多线程下会导致同时创建100个队伍
+    LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
+    wrapper.eq(Team::getUserId, userId);
+    long count = this.count(wrapper);
+    if (count >= 5) {
+        throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户最多创建5个队伍");
+    }
+}
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateTeam(TeamUpdateRequest teamUpdateRequest, User loginUser) {
@@ -162,7 +173,7 @@ private AliOSSUtils aliOSSUtils;
         }
         // 只有管理者或者创建者可以修改
         // 既不是管理者也不是创建者,不可以修改
-        if (oldTeam.getUserid() != loginUser.getId() && !userService.isAdmin(loginUser)) {
+        if (oldTeam.getUserId() != loginUser.getId() && !userService.isAdmin(loginUser)) {
             throw new BusinessEception(ErrorCode.NO_AUTH);
         }
         Team updateTeam = new Team();
@@ -187,7 +198,7 @@ private AliOSSUtils aliOSSUtils;
             throw new BusinessEception(ErrorCode.NULL_ERROR, "队伍不存在");
         }
         // 过期的队伍不能加入
-        Date expireTime = team.getExpiretime();
+        Date expireTime = team.getExpireTime();
         if (expireTime != null && expireTime.before(new Date())) {
             throw new BusinessEception(ErrorCode.NULL_ERROR, "队伍已经过期");
         }
@@ -231,7 +242,7 @@ private AliOSSUtils aliOSSUtils;
                     }
                     // 已加入队伍的人数
                     long teamHasJoinNum = this.countTeam(teamId);
-                    if (teamHasJoinNum >= team.getMaxnum()) {
+                    if (teamHasJoinNum >= team.getMaxNum()) {
                         throw new BusinessEception(ErrorCode.PARAMS_ERROR, "队伍已满");
                     }
                     // 修改队伍信息
@@ -279,7 +290,7 @@ private AliOSSUtils aliOSSUtils;
 
         } else {
             // 是队长
-            if (team.getUserid() == userId) {
+            if (team.getUserId() == userId) {
                 // 把最近的队长给最早加入的用户
                 // 查询已加入队伍的所有用户和时间 按userteam关系表,越早加入的用户userteam越小
                 wrapper = new QueryWrapper<>();
@@ -294,7 +305,7 @@ private AliOSSUtils aliOSSUtils;
                 // 更新team的队长
                 Team updateTeam = new Team();
                 updateTeam.setId(teamId);
-                updateTeam.setUserid(nextUserUserId);
+                updateTeam.setUserId(nextUserUserId);
                 boolean result = this.updateById(updateTeam);
                 if (!result) {
                     throw new BusinessEception(ErrorCode.SYSTEM);
@@ -318,7 +329,7 @@ private AliOSSUtils aliOSSUtils;
         Team team = this.getTeam(teamId);
         // 校验是否是队长
         long userId = loginUser.getId();
-        if (team.getUserid() != userId) {
+        if (team.getUserId() != userId) {
             throw new BusinessEception(ErrorCode.NO_AUTH, "不是队长无权限");
         }
         QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
@@ -337,31 +348,6 @@ private AliOSSUtils aliOSSUtils;
         return deleteTeam;
     }
 
-    /**
-     * 获取我所有参加入的队伍
-     *
-     * @param userId 当前用户的id
-     * @return
-     */
-    @Override
-    public List<TeamUserVo> listAllMyJoin(long userId) {
-        //根据id得出用户参加的队伍user_team 中的teamid
-        LambdaQueryWrapper<UserTeam> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(UserTeam::getUserId, userId);
-        // map就是将每个对象转换成对应引用方法的返回值
-        List<Long> teamIds = userTeamService.list(wrapper).stream().map(UserTeam::getTeamId).collect(Collectors.toList());
-        // 如果不存在则报错
-        if (teamIds.isEmpty()) {
-            return new ArrayList<>();
-        }
-        List<Team> teams = this.listByIds(teamIds);
-        return teams.stream().map((team) -> {
-            TeamUserVo teamUserVo = new TeamUserVo();
-            BeanUtils.copyProperties(team, teamUserVo);
-            teamUserVo.setHasJoin(true);
-            return teamUserVo;
-        }).collect(Collectors.toList());
-    }
 
     /**
      * 获取队伍信息
@@ -376,7 +362,6 @@ private AliOSSUtils aliOSSUtils;
         // 组合查询
         // 获取当前搜索词语
         String searchText = teamRequst.getSearchText();
-        // 根据队伍Id来查询
         Long teamId = teamRequst.getId();
         // 根据队伍名称来查询
         String teamName = teamRequst.getName();
@@ -398,8 +383,8 @@ private AliOSSUtils aliOSSUtils;
                         .like(Team::getDescription, description))
                 .eq(Team::getStatus, teamStatusEnum.getStatus())
                 // 表示不展示过期的队伍
-                .and(qw -> qw.gt(Team::getExpiretime, new Date()).or().isNull(Team::getExpiretime))
-                .orderBy(true, false, Team::getCreatetime);
+                .and(qw -> qw.gt(Team::getExpireTime, new Date()).or().isNull(Team::getExpireTime))
+                .orderBy(true, false, Team::getCreateTime);
         Page<TeamVO> teamVOPage = listPageTeam(currentPage, wrapper);
         return teamVOPage;
     }
@@ -422,9 +407,13 @@ private AliOSSUtils aliOSSUtils;
                     .limit(MAXIMUM_JOINED_USER_AVATAR_NUM)
                     .collect(Collectors.toList());
             // 根据id查询 所有用户
-//           方法一：  LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+//           方法一：  LambdaQueryWra   pper<User> wrapper = new LambdaQueryWrapper<>();
 //            wrapper.select(User::getAvatarUrl).in(User::getId,joinedUserIdList);
 //            List<User> list = userService.list(wrapper);
+            // 判断找出来的用户是否为0 如果为0 返回kong
+            if (CollectionUtil.isEmpty(joinedUserIdList)) {
+                throw new BusinessEception(ErrorCode.SYSTEM,"没有队伍了");
+            }
             List<String> joinedUserAvatarList = userService.listByIds(joinedUserIdList)
                     .stream().map((User::getAvatarUrl))
                     .collect(Collectors.toList());
@@ -436,14 +425,15 @@ private AliOSSUtils aliOSSUtils;
     /**
      * 根据队伍Id查询队伍信息
      *
-     * @param teamId
-     * @param userId
+     * @param teamId 队伍id
+     * @param userId 登录用户id
      * @return
      */
     @Override
     public TeamVO getTeam(Long teamId, long userId) {
         // 获取队伍
         Team team = this.getById(teamId);
+        Long teamUserId = team.getUserId();
         TeamVO teamVO = new TeamVO();
         BeanUtils.copyProperties(team, teamVO);
         LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -456,9 +446,11 @@ private AliOSSUtils aliOSSUtils;
         // 获取登录用户是否加入
         teamVO.setHasJoin(userJoin > 0);
         // 获取用户的领导者昵称
-        User leader = userService.getById(team.getUserid());
+        User leader = userService.getById(teamUserId);
         teamVO.setLeaderName(leader.getUsername());
-
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(leader,userVO);
+        teamVO.setCreateUser(userVO);
         return teamVO;
     }
 
@@ -505,11 +497,11 @@ private AliOSSUtils aliOSSUtils;
     public void kickOut(Long teamId, Long KickUserId, long loginId, boolean admin) {
         // 获取当前队伍关系 还有就是不能自己踢自己
         Team team = this.getTeam(teamId);
-        Long teamUserId = team.getUserid();
+        Long teamUserId = team.getUserId();
         // 判断是否是管理员或则是登录用户
         isAuth(teamUserId, loginId, admin);
 
-        if (team.getUserid() == KickUserId) {
+        if (team.getUserId() == KickUserId) {
             throw new BusinessEception(ErrorCode.NO_AUTH, "不能踢掉自己");
         }
         LambdaQueryWrapper<UserTeam> wrapper = new LambdaQueryWrapper<>();
@@ -546,7 +538,7 @@ private AliOSSUtils aliOSSUtils;
         // 判断是否有权限修改
         Long teamId = teamUpdateAvart.getId();
         Team team = this.getTeam(teamId);
-        Long teamUserId = team.getUserid();
+        Long teamUserId = team.getUserId();
         isAuth(teamUserId, loginId, admin);
         //有权修改 上传照片到阿里云
         String imageName = "";
@@ -559,16 +551,119 @@ private AliOSSUtils aliOSSUtils;
             throw  new BusinessEception(ErrorCode.SYSTEM);
         }
         // 并修改数据库里面的信息
-        team.setCoverimage(imageName);
+        team.setCoverImage(imageName);
         team.setId(teamId);
       this.updateById(team);
     }
 
+    /**
+     * 获取我加入的队伍
+     * @param currentPage 当前页码
+     * @param loginId 登录的用户id
+     * @param teamRequst
+     * @return
+     */
+    @Override
+    public Page<TeamVO> getCreateUserWithTeam(long currentPage, long loginId, TeamRequst teamRequst) {
+        // 组合查询
+        // 获取当前搜索词语
+        String searchText = teamRequst.getSearchText();
+        Long teamId = teamRequst.getId();
+        // 根据队伍名称来查询
+        String teamName = teamRequst.getName();
+        // 根据队伍描述来查询
+        String description = teamRequst.getDescription();
+        LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
+        // 根据条件来进行查询
+        // sql：=> where (teamName like( searchText) or description like( searchText))
+        //               and (statsu = teamStatusEnum.getstatus);
+        wrapper.and(StringUtils.isNotBlank(searchText),
+                qw -> qw.like(Team::getName, searchText)
+                        .or()
+                        .like(Team::getDescription, description))
+                // 表示不展示过期的队伍
+                .and(qw -> qw.gt(Team::getExpireTime, new Date()).or().isNull(Team::getExpireTime))
+                // 获取当前用户创建的队伍
+                .eq(Team::getUserId,loginId)
+                .orderBy(true, false, Team::getCreateTime);
+        Page<TeamVO> teamVOPage = listPageTeam(currentPage, wrapper);
+        return teamVOPage;
+    }
 
     /**
-     * 获取队长的信息 包括整个队伍的信息
+     * 获取当前用户所有加入的队伍
+     * @param currentPage 当前页码
+     * @param loginId
+     * @param teamRequst
+     * @return
+     */
+    @Override
+    public Page<TeamVO> getCreateUserWithJoinTeam(long currentPage, long loginId, TeamRequst teamRequst) {
+        // 组合查询
+        // 获取当前搜索词语
+        String searchText = teamRequst.getSearchText();
+        Long teamId = teamRequst.getId();
+        // 根据队伍名称来查询
+        String teamName = teamRequst.getName();
+        // 根据队伍描述来查询
+        String description = teamRequst.getDescription();
+        LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        userTeamLambdaQueryWrapper.select(UserTeam::getTeamId,UserTeam::getUserId).eq(UserTeam::getUserId, loginId);
+        // 获取对应用户加入的队伍id
+        List<Long> teamIds = userTeamService.list(userTeamLambdaQueryWrapper)
+                .stream().map(UserTeam::getTeamId)
+                .collect(Collectors.toList());
+
+        LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
+        // 根据条件来进行查询
+        // sql：=> where (teamName like( searchText) or description like( searchText))
+        //               and (statsu = teamStatusEnum.getstatus);
+        wrapper.and(StringUtils.isNotBlank(searchText),
+                qw -> qw.like(Team::getName, searchText)
+                        .or()
+                        .like(Team::getDescription, description))
+                // 表示不展示过期的队伍
+                .and(qw -> qw.gt(Team::getExpireTime, new Date()).or().isNull(Team::getExpireTime))
+                // 获取当前用户加入的队伍
+              .in(Team::getId,teamIds)
+                .orderBy(true, false, Team::getCreateTime);
+        Page<TeamVO> teamVOPage = listPageTeam(currentPage, wrapper);
+        return teamVOPage;
+    }
+
+    /**
+     * 获取信息界面自己加入的队伍
+     * @param loginId 登录用户id
+     * @return
+     */
+    @Override
+    public List<TeamVO> MessagelistAllMyJoin(long loginId) {
+        LambdaQueryWrapper<UserTeam> userTeamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        userTeamLambdaQueryWrapper.eq(UserTeam::getUserId, loginId);
+        // map就是将每个对象转换成对应引用方法的返回值
+        List<Long> teamIds = userTeamService.list(userTeamLambdaQueryWrapper)
+                .stream().map(UserTeam::getTeamId)
+                .collect(Collectors.toList());
+        if (teamIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+        LambdaQueryWrapper<Team> teamLambdaQueryWrapper = new LambdaQueryWrapper<>();
+        teamLambdaQueryWrapper.in(Team::getId, teamIds);
+        List<Team> teamList = this.list(teamLambdaQueryWrapper);
+        return teamList.stream().map((team) -> {
+            TeamVO teamVO = new TeamVO();
+            BeanUtils.copyProperties(team, teamVO);
+            teamVO.setHasJoin(true);
+            return teamVO;
+        }).collect(Collectors.toList());
+    }
+
+
+    /**
+     * (wrapper类型 => Team)获取队长的信息 包括整个队伍的信息
      */
     private Page<TeamVO> listPageTeam(long currentaPage, LambdaQueryWrapper<Team> wrapper) {
+        // 根据分页进行获取
         Page<Team> teamPage = this.page(new Page<>(currentaPage, PAGE_SIZE), wrapper);
         if (CollectionUtils.isEmpty(teamPage.getRecords())) {
             return new Page<>();
@@ -579,7 +674,8 @@ private AliOSSUtils aliOSSUtils;
         List<Team> teamPageRecords = teamPage.getRecords();
         ArrayList<TeamVO> teamUserVOList = new ArrayList<>();
         for (Team team : teamPageRecords) {
-            Long userId = team.getUserid();
+            Long userId = team.getUserId();
+            // 空的就舍弃
             if (userId == null) {
                 continue;
             }
@@ -598,6 +694,7 @@ private AliOSSUtils aliOSSUtils;
         teamVOPage.setRecords(teamUserVOList);
         return teamVOPage;
     }
+
 
 
     /**
@@ -625,6 +722,33 @@ private AliOSSUtils aliOSSUtils;
         }
         return team;
     }
+//    /**
+//     * 获取我所有参加入的队伍
+//     *
+//     *
+//     * @param currentPage
+//     * @param userId 当前用户的id
+//     * @return
+//     */
+//    @Override
+//    public Page<TeamVO> listAllMyJoin(long currentPage, long userId) {
+//        //根据id得出用户参加的队伍user_team 中的teamid
+//        LambdaQueryWrapper<UserTeam> wrapper = new LambdaQueryWrapper<>();
+//        wrapper.eq(UserTeam::getUserId, userId);
+//        // map就是将每个对象转换成对应引用方法的返回值
+//        List<Long> teamIds = userTeamService.list(wrapper).stream().map(UserTeam::getTeamId).collect(Collectors.toList());
+//        // 如果不存在则报错
+//        if (teamIds.isEmpty()) {
+//            return new ArrayList<>();
+//        }
+//        List<Team> teams = this.listByIds(teamIds);
+//        return teams.stream().map((team) -> {
+//            TeamUserVo teamUserVo = new TeamUserVo();
+//            BeanUtils.copyProperties(team, teamUserVo);
+//            teamUserVo.setHasJoin(true);
+//            return teamUserVo;
+//        }).collect(Collectors.toList());
+//    }
 
 }
 

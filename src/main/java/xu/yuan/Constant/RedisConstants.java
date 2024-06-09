@@ -3,8 +3,7 @@ package xu.yuan.Constant;
 /**
  * Redis常量
  *
- * @author OchiaMalu
- * @date 2023/06/22
+ * @author xuyuan
  */
 public final class RedisConstants {
     private RedisConstants() {

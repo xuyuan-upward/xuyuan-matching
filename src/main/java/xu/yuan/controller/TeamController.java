@@ -55,7 +55,7 @@ public class TeamController {
     private UserTeamService userTeamService;
 
     /**
-     * 加入队伍
+     * 添加队伍
      *
      * @param teamAddRequest
      * @param request
@@ -67,12 +67,51 @@ public class TeamController {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
         User logUser = userService.getLogUser(request);
+        if (logUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
         Team team = new Team();
         BeanUtils.copyProperties(teamAddRequest, team);
         long teamId = teamService.addTeam(team, logUser);
         return ResultUtils.success(teamId);
     }
+    /**
+     * 我创建团队名单
+     *
+     * @param currentPage 当前页面
+     * @param teamRequst   团队查询
+     * @param request     请求
+     */
+    @GetMapping("/list/my/create")
+    @ApiOperation(value = "获取我创建的队伍")
+    @ApiImplicitParams({@ApiImplicitParam(name = "teamQuery", value = "获取队伍请求参数"),
+            @ApiImplicitParam(name = "request", value = "request请求")})
+    public Result<Page<TeamVO>> listMyCreateTeams(long currentPage,
+                                                        TeamRequst teamRequst,
+                                                        HttpServletRequest request) {
+        if (teamRequst == null) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
+        teamRequst.setUserId(loginUser.getId());
+        // 返回我创建人的信息，已经其他队伍信息
+        Page<TeamVO> teamVOPage = teamService.getCreateUserWithTeam(currentPage, loginUser.getId(),teamRequst);
+        // 获取
+        Page<TeamVO> teamVoPageWithAvatar = teamService.getJoinedUserAvatarUrl(teamVOPage);
+        Page<TeamVO> finalPage = getTeamHasJoinNum(teamVoPageWithAvatar);
+        return getTeamIsJoinList(loginUser, finalPage);
+    }
 
+
+    /**
+     * 更新队伍
+     * @param teamUpdateRequest
+     * @param request
+     * @return
+     */
     @PostMapping("/update")
     public Result<Boolean> updateTeam(@RequestBody TeamUpdateRequest teamUpdateRequest, HttpServletRequest request) {
         if (teamUpdateRequest == null) {
@@ -86,60 +125,24 @@ public class TeamController {
         return ResultUtils.success(true);
     }
 
+    /**
+     * 获取队伍信息
+     * @param id
+     * @return
+     */
     @GetMapping("/get")
-    public Result<Team> getTeam(long id) {
+    public Result<TeamVO> getTeam(long id,HttpServletRequest request) {
         if (id <= 0) {
-            throw new BusinessEception(ErrorCode.NULL_ERROR);
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
-        Team team = teamService.getById(id);
-        if (team == null) {
-            throw new BusinessEception(ErrorCode.SYSTEM, "查询失败");
+        User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
-        return ResultUtils.success(team);
+        Long teamId = Long.valueOf(id);
+        return ResultUtils.success(teamService.getTeam(teamId, loginUser.getId()));
     }
 
-//    @GetMapping("/list")
-//    public Result<List<Team>> getTeam(@RequestBody TeamRequst teamRequst){
-//        if (teamRequst == null){
-//            throw new BusinessEception(ErrorCode.NULL_ERROR);
-//        }
-//        Team team = new Team();
-//        BeanUtils.copyProperties(teamRequst,team);
-//        Page<Team> teamPage = new Page<>(teamRequst.getPageNum(), teamRequst.getPageSize());
-//        LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
-//        Page<Team> newPage = teamService.page(teamPage, wrapper);
-//        return ResultUtils.success(newPage);
-//    }
-//
-//    /**
-//     * 获取我加入的队伍
-//     *
-//     * @param teamRequst
-//     * @param request
-//     * @return
-//     */
-//    @GetMapping("/list/my/join")
-//    public Result<List<TeamUserVo>> myjoingetTeam(TeamRequst teamRequst, HttpServletRequest request) {
-//        if (teamRequst == null) {
-//            throw new BusinessEception(ErrorCode.NULL_ERROR);
-//        }
-//        User logUser = userService.getLogUser(request);
-//
-//        QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
-//        wrapper.eq("userId", logUser.getId());
-//        List<UserTeam> userTeamList = userTeamService.list(wrapper);
-//        // key: teamId    values: userId
-//        // 1, 2
-//        // 2, 2
-//        // 3, 3
-//        Map<Long, List<UserTeam>> listMap = userTeamList.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
-//        // 获取当前用户所有加入队伍的teamId
-//        ArrayList<Long> idList = new ArrayList<>(listMap.keySet());
-//        // 获取当前用户所有加入队伍的team的字段Id
-//        teamRequst.setIdList(idList);
-//        List<TeamUserVo> teamUserVos = teamService.listTeams(teamRequst, true);
-//        return ResultUtils.success(teamUserVos);
-//    }
 
     /**
      * 列出所有我加入的团队
@@ -147,40 +150,41 @@ public class TeamController {
      * @param request 请求
      * @return {@link }<{@link List}<{@link }>>
      */
-    @GetMapping("/list/my/join/all")
+    @GetMapping("/list/my/join")
     @ApiOperation(value = "获取我加入的队伍")
     @ApiImplicitParams({@ApiImplicitParam(name = "teamQuery", value = "获取队伍请求参数"),
             @ApiImplicitParam(name = "request", value = "request请求")})
-    public Result<List<TeamUserVo>> listAllMyJoinTeams(HttpServletRequest request) {
+    public Result<Page<TeamVO>> listAllMyJoinTeams(long currentPage,
+                                                       TeamRequst teamRequst, HttpServletRequest request) {
         User loginUser = userService.getLogUser(request);
         if (loginUser == null) {
             throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
-        List<TeamUserVo> teamVOList = teamService.listAllMyJoin(loginUser.getId());
+        // 返回我创建人的信息，已经其他队伍信息
+        Page<TeamVO> teamVOPage = teamService.getCreateUserWithJoinTeam(currentPage, loginUser.getId(),teamRequst);
+        // 获取
+        Page<TeamVO> teamVoPageWithAvatar = teamService.getJoinedUserAvatarUrl(teamVOPage);
+        Page<TeamVO> finalPage = getTeamHasJoinNum(teamVoPageWithAvatar);
+        return getTeamIsJoinList(loginUser, finalPage);
+    }
+
+    /**
+     * 列出所有我加入团队
+     *
+     * @param request 请求
+     */
+    @GetMapping("/list/my/join/all")
+    @ApiOperation(value = "获取我加入的队伍")
+    @ApiImplicitParams({@ApiImplicitParam(name = "teamQuery", value = "获取队伍请求参数"),
+            @ApiImplicitParam(name = "request", value = "request请求")})
+    public Result<List<TeamVO>> listAllMyJoinTeams(HttpServletRequest request) {
+        User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
+        List<TeamVO> teamVOList = teamService.MessagelistAllMyJoin(loginUser.getId());
         return ResultUtils.success(teamVOList);
     }
-//
-//    /**
-//     * 获取我创建的队伍
-//     *
-//     * @param teamRequst
-//     * @param request
-//     * @return
-//     */
-//    @GetMapping("/list/my/create")
-//    public Result<List<TeamUserVo>> myCreateTeam(TeamRequst teamRequst, HttpServletRequest request) {
-//        if (teamRequst == null) {
-//            throw new BusinessEception(ErrorCode.NULL_ERROR);
-//        }
-//        User logUser = userService.getLogUser(request);
-//        long userId = logUser.getId();
-//        teamRequst.setUserId(userId);
-//        List<TeamUserVo> teamUserVos = teamService.listTeams(teamRequst, true);
-//        return ResultUtils.success(teamUserVos);
-//    }
-
-
-
     /**
      * 获取公开或者加密的队伍
      *
@@ -230,7 +234,6 @@ public class TeamController {
      * @param finalPage
      * @return
      */
-
     private Result<Page<TeamVO>> getTeamIsJoinList(User loginUser, Page<TeamVO> finalPage) {
         // 获取当前登录用户id
         long loginUserId = loginUser.getId();
@@ -294,6 +297,7 @@ public class TeamController {
             wrapper.eq(UserTeam::getTeamId, team.getId());
             long hasJoinNum = userTeamService.count(wrapper);
             team.setHasJoinNum(hasJoinNum);
+            wrapper.clear();
         });
         teamVoPageWithAvatar.setRecords(teamList);
         return teamVoPageWithAvatar;
@@ -411,5 +415,68 @@ public class TeamController {
         teamService.changeCoverImage(teamUpdateAvart, loginUser.getId(), admin);
         return ResultUtils.success("ok");
     }
+
+    //    @GetMapping("/list")
+//    public Result<List<Team>> getTeam(@RequestBody TeamRequst teamRequst){
+//        if (teamRequst == null){
+//            throw new BusinessEception(ErrorCode.NULL_ERROR);
+//        }
+//        Team team = new Team();
+//        BeanUtils.copyProperties(teamRequst,team);
+//        Page<Team> teamPage = new Page<>(teamRequst.getPageNum(), teamRequst.getPageSize());
+//        LambdaQueryWrapper<Team> wrapper = new LambdaQueryWrapper<>();
+//        Page<Team> newPage = teamService.page(teamPage, wrapper);
+//        return ResultUtils.success(newPage);
+//    }
+//
+//    /**
+//     * 获取我加入的队伍
+//     *
+//     * @param teamRequst
+//     * @param request
+//     * @return
+//     */
+//    @GetMapping("/list/my/join")
+//    public Result<List<TeamUserVo>> myjoingetTeam(TeamRequst teamRequst, HttpServletRequest request) {
+//        if (teamRequst == null) {
+//            throw new BusinessEception(ErrorCode.NULL_ERROR);
+//        }
+//        User logUser = userService.getLogUser(request);
+//
+//        QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();
+//        wrapper.eq("userId", logUser.getId());
+//        List<UserTeam> userTeamList = userTeamService.list(wrapper);
+//        // key: teamId    values: userId
+//        // 1, 2
+//        // 2, 2
+//        // 3, 3
+//        Map<Long, List<UserTeam>> listMap = userTeamList.stream().collect(Collectors.groupingBy(UserTeam::getTeamId));
+//        // 获取当前用户所有加入队伍的teamId
+//        ArrayList<Long> idList = new ArrayList<>(listMap.keySet());
+//        // 获取当前用户所有加入队伍的team的字段Id
+//        teamRequst.setIdList(idList);
+//        List<TeamUserVo> teamUserVos = teamService.listTeams(teamRequst, true);
+//        return ResultUtils.success(teamUserVos);
+//    }
+//
+//    /**
+//     * 获取我创建的队伍
+//     *
+//     * @param teamRequst
+//     * @param request
+//     * @return
+//     */
+//    @GetMapping("/list/my/create")
+//    public Result<List<TeamUserVo>> myCreateTeam(TeamRequst teamRequst, HttpServletRequest request) {
+//        if (teamRequst == null) {
+//            throw new BusinessEception(ErrorCode.NULL_ERROR);
+//        }
+//        User logUser = userService.getLogUser(request);
+//        long userId = logUser.getId();
+//        teamRequst.setUserId(userId);
+//        List<TeamUserVo> teamUserVos = teamService.listTeams(teamRequst, true);
+//        return ResultUtils.success(teamUserVos);
+//    }
+
 }
 

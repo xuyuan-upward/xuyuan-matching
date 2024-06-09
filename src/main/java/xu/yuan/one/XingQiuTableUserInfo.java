@@ -5,8 +5,6 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 /**
- * @author: shayu
- * @date: 2022/11/20
  * @ClassName: yupao-backend01
  * @Description:    星球表格用户信息
  */

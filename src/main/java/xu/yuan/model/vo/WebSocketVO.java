@@ -10,7 +10,6 @@ import java.io.Serializable;
  * 网络套接字签证官
  *
  * @author xuyuan
- * @date 2023/06/22
  */
 @Data
 @ApiModel(value = "websocket返回")

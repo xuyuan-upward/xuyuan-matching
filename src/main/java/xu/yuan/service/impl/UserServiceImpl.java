@@ -8,14 +8,12 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
-import net.bytebuddy.description.method.MethodDescription;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.DigestUtils;
-import xu.yuan.Constant.RedisConstants;
 import xu.yuan.enums.ErrorCode;
 import xu.yuan.Eception.BusinessEception;
 import xu.yuan.model.domain.Follow;
@@ -258,20 +256,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
-     * 内存使用
+     * 根据标签进行选择
      *
      * @param tagList
+     * @param currentPage
      * @return
      */
     @Override
-    public List<User> searchUserByTag(List<String> tagList) {
-        if (CollectionUtils.isEmpty(tagList)) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
-        }
+    public Page<UserVO> searchUserByTag(List<String> tagList, long currentPage) {
         // 先查询所有用户
-        QueryWrapper<User> wrapper = new QueryWrapper<>();
-        List<User> userList = userMapper.selectList(wrapper);
-        Gson gson = new Gson();
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 根据每条进行模糊匹配
+        for (String tag : tagList) {
+           wrapper = wrapper.or().like(StringUtils.isNotBlank(tag),User::getTags, tag);
+        }
+        Page<User> page = new Page<>(currentPage,PAGE_SIZE);
+        Page<User> userpage = this.page(page, wrapper);
+        Page<UserVO> userVOPage = new Page<UserVO>();
+        /*使用 BeanUtils.copyProperties 方法时，它只会拷贝源对象和目标对象中具有相同名称和相同类型的属性。
+        如果源对象和目标对象中的属性不完全匹配或属性是嵌套对象（如列表中的对象），则这些嵌套对象不会被深拷贝。
+        在你的代码中，userpage 是 Page<User> 类型，userVOPage 是 Page<UserVO> 类型。BeanUtils.copyProperties(userpage, userVOPage);
+         只会拷贝 Page 对象的属性（如总记录数、当前页码、每页记录数等），而不会自动拷贝 records 属性中 User 对象列表到 UserVO 对象列表。*/
+        BeanUtils.copyProperties(userpage,userVOPage,"records");
+        List<UserVO> userVOList = userpage.getRecords().stream().map(user -> {
+            UserVO userVO = new UserVO();
+            BeanUtils.copyProperties(user, userVO);
+            return userVO;
+        }).collect(Collectors.toList());
+        userVOPage.setRecords(userVOList);
+        return userVOPage;
+       /* Gson gson = new Gson();
         //然后在内存中判断包含要求的标签
         return userList.stream().filter(user -> {
             String tags = user.getTags();
@@ -285,7 +299,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
                 }
             }
             return true;
-        }).map(this::getSaftyUser).collect(Collectors.toList());
+        }).map(this::getSaftyUser).collect(Collectors.toList());*/
     }
 
     @Override
@@ -609,21 +623,22 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     /**
      * 获取私聊对象信息
      *
-     * @param toId
-     * @param userId
+     * @param toId 私聊用户的id
+     * @param userId 登录用户的id
      * @return
      */
     @Override
     public UserVO getUserById(Long toId, long userId) {
         // 获取私聊对象，托敏返回
-        LambdaQueryWrapper<Follow> wrpper = new LambdaQueryWrapper<>();
+        LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<>();
         // 获取是否关注
-        wrpper.eq(Follow::getUserId, userId).eq(Follow::getFollowUserId, toId);
+        wrapper.eq(Follow::getUserId, userId).eq(Follow::getFollowUserId, toId);
         User toUser = this.getById(toId);
         UserVO userVO = new UserVO();
         // 脱敏拷贝
         BeanUtils.copyProperties(toUser, userVO);
-        int count = followService.count(wrpper);
+        // 获取是否有关注的人
+        int count = followService.count(wrapper);
         userVO.setIsFollow(count > 0);
         return userVO;
     }

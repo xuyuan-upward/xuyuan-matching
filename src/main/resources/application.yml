@@ -3,20 +3,21 @@ spring:
     name: yupao-backend
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    username: root
-    password: 1234
-    url: jdbc:mysql://localhost:3306/xuyuan
+    username: xuyuan-matching
+    password: 12345678
+    url: jdbc:mysql://47.120.70.248:3306/xuyuan-matching?serverTimezone=Asia/Shanghai
   # session 失效时间（分钟）
   session:
-    timeout: 8640  #表示一天过期
+    timeout: 4000  #表示一天过期
     store-type: redis
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher #解决spring和swagger2版本冲突问题
   redis:
-    host: localhost
+    host: 47.120.70.248
     port: 6379
     database: 0
+    password: @Xuyuan1371480
 server:
   port: 8080
   servlet:
@@ -64,18 +65,21 @@ knife4j:
 #  String templateCode = smsProperties.getTemplateCode();
 #  request.setTemplateCode(smsProperties.getTemplateCode());
 xuyuan:
-  useShort-messagingService: false
+  useShort-messagingService: true
   sms:
     region-id: cn-hangzhou
-    access-key: LTAI5tDh562VY733fnLjKdGq
-    secret-key: L5bRGjep2jLAuq6NVeB5raS7Rf7DfK
+    access-key: LTAI5tH2kzFpCgZFJeLSDpYX
+    secret-key: ZbtpjUuLNxJkJLHlBkeMRuechPARFG
     sign-name: 许苑园
-    template-code: SMS_465640342
+    template-code: SMS_468235105
   oos:
     end-point: oss-cn-beijing.aliyuncs.com
-    access-key: LTAI5tDh562VY733fnLjKdGq
-    secret-key: L5bRGjep2jLAuq6NVeB5raS7Rf7DfK
+    access-key: LTAI5tH2kzFpCgZFJeLSDpYX
+    secret-key: ZbtpjUuLNxJkJLHlBkeMRuechPARFG
     bucket-name: xuyuan-up-matching
+  ai:
+    enable: true
+    key: f0df1b534cd25975c82ab741cd9bbc10.vhUDNbxE6mAHrNmh
 #  # 阿里云oss
 #  aliyun:
 #    oss:

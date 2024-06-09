@@ -53,7 +53,7 @@ public interface UserService extends IService<User> {
      * 根据标签搜索用户
      * @return
      */
-    List<User> searchUserByTag(List<String> tagLiat);
+    Page<UserVO> searchUserByTag(List<String> tagLiat, long currentPage);
 
     int updateUser(User user, User logUser);
 

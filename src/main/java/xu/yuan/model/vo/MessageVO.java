@@ -10,7 +10,6 @@ import xu.yuan.model.domain.Message;
  * 消息vo
  *
  * @author xuyuan
- * @date 2023/06/22
  */
 @EqualsAndHashCode(callSuper = true)
 @Data

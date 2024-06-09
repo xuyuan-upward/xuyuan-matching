@@ -35,19 +35,19 @@ public class Team implements Serializable {
      * 最大人数
      */
     @TableField(value = "maxNum")
-    private Integer maxnum;
+    private Integer maxNum;
 
     /**
      * 过期时间
      */
     @TableField(value = "expireTime")
-    private Date expiretime;
+    private Date expireTime;
 
     /**
      * 用户id
      */
     @TableField(value = "userId")
-    private Long userid;
+    private Long userId;
 
     /**
      * 0 - 公开，1 - 私有，2 - 加密
@@ -65,25 +65,25 @@ public class Team implements Serializable {
      * 创建时间
      */
     @TableField(value = "createTime")
-    private Date createtime;
+    private Date createTime;
 
     /**
      * 
      */
     @TableField(value = "updateTime")
-    private Date updatetime;
+    private Date updateTime;
 
     /**
      * 是否删除
      */
     @TableField(value = "isDelete")
-    private Integer isdelete;
+    private Integer isDelete;
 
     /**
      * 队伍图片
      */
     @TableField(value = "coverImage")
-    private String coverimage;
+    private String coverImage;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
@@ -133,43 +133,43 @@ public class Team implements Serializable {
     /**
      * 最大人数
      */
-    public Integer getMaxnum() {
-        return maxnum;
+    public Integer getMaxNum() {
+        return maxNum;
     }
 
     /**
      * 最大人数
      */
-    public void setMaxnum(Integer maxnum) {
-        this.maxnum = maxnum;
+    public void setMaxNum(Integer maxNum) {
+        this.maxNum = maxNum;
     }
 
     /**
      * 过期时间
      */
-    public Date getExpiretime() {
-        return expiretime;
+    public Date getExpireTime() {
+        return expireTime;
     }
 
     /**
      * 过期时间
      */
-    public void setExpiretime(Date expiretime) {
-        this.expiretime = expiretime;
+    public void setExpireTime(Date expireTime) {
+        this.expireTime = expireTime;
     }
 
     /**
      * 用户id
      */
-    public Long getUserid() {
-        return userid;
+    public Long getUserId() {
+        return userId;
     }
 
     /**
      * 用户id
      */
-    public void setUserid(Long userid) {
-        this.userid = userid;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 
     /**
@@ -203,56 +203,56 @@ public class Team implements Serializable {
     /**
      * 创建时间
      */
-    public Date getCreatetime() {
-        return createtime;
+    public Date getCreateTime() {
+        return createTime;
     }
 
     /**
      * 创建时间
      */
-    public void setCreatetime(Date createtime) {
-        this.createtime = createtime;
+    public void setCreateTime(Date createTime) {
+        this.createTime = createTime;
     }
 
     /**
      * 
      */
-    public Date getUpdatetime() {
-        return updatetime;
+    public Date getUpdateTime() {
+        return updateTime;
     }
 
     /**
      * 
      */
-    public void setUpdatetime(Date updatetime) {
-        this.updatetime = updatetime;
+    public void setUpdateTime(Date updateTime) {
+        this.updateTime = updateTime;
     }
 
     /**
      * 是否删除
      */
-    public Integer getIsdelete() {
-        return isdelete;
+    public Integer getIsDelete() {
+        return isDelete;
     }
 
     /**
      * 是否删除
      */
-    public void setIsdelete(Integer isdelete) {
-        this.isdelete = isdelete;
+    public void setIsDelete(Integer isDelete) {
+        this.isDelete = isDelete;
     }
 
     /**
      * 队伍图片
      */
-    public String getCoverimage() {
-        return coverimage;
+    public String getCoverImage() {
+        return coverImage;
     }
 
     /**
      * 队伍图片
      */
-    public void setCoverimage(String coverimage) {
-        this.coverimage = coverimage;
+    public void setCoverImage(String coverImage) {
+        this.coverImage = coverImage;
     }
 }
