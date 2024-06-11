@@ -78,6 +78,7 @@ public interface UserService extends IService<User> {
     void updateTags(List<String> tags, long id);
 
     void updatePassword(String phone, String password, String confirmPassword,HttpServletRequest request);
+    void updatePhone(String phone, String password, HttpServletRequest request);
 
     /**
      * 获取对应私聊用户的信息

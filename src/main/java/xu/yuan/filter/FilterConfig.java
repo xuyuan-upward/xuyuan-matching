@@ -17,7 +17,7 @@
 //import java.io.IOException;
 //import java.io.PrintWriter;
 //
-//import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
+//import static xu.yuan.Constant.UserConstant.LOGIN_USER_KEY;
 //@Slf4j
 ////@Configuration
 //public class FilterConfig implements Filter {
@@ -50,7 +50,7 @@
 //            return;
 //        }
 //        // 判断是否登录
-//        User loginUser = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User loginUser = (User) request.getSession().getAttribute(LOGIN_USER_KEY);
 //        // 已经登录
 //        if (loginUser != null ){
 //            log.info("本次{}请求放行:",requestURI);

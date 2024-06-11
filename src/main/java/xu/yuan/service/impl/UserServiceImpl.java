@@ -38,7 +38,7 @@ import static xu.yuan.Common.SystemCommon.PAGE_SIZE;
 import static xu.yuan.Common.SystemCommon.REGISTER_CODE_KEY;
 import static xu.yuan.Constant.RedisConstants.USER_MATCH_KEY;
 import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
-import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
+import static xu.yuan.Constant.UserConstant.LOGIN_USER_KEY;
 
 /**
  * @author 许苑
@@ -174,7 +174,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User saftyUser = getSaftyUser(user);
         log.info("saftyUser:{}",saftyUser);
         //记录用户登录状态
-        httpServletRequest.getSession().setAttribute(USER_LOGIN_STATE, saftyUser);
+        httpServletRequest.getSession().setAttribute(LOGIN_USER_KEY, saftyUser);
         return saftyUser;
     }*/
     @Override
@@ -211,12 +211,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User safetyUser = getSaftyUser(user);
         // 4. 记录用户的登录态 此是session存放到了redis中
         // request.getSession()方法为每个用户请求创建或获取一个唯一的Session实例，
-        // 所以即使所有用户都设置了同样的attribute名称（如USER_LOGIN_STATE），
+        // 所以即使所有用户都设置了同样的attribute名称（如LOGIN_USER_KEY），
         // 这些属性也是隔离的，存储在各自的Session中，通过Session ID区分，确保数据的独立性和准确性。
 
         // 最重要的一点就是 没有使用redis存储每个用户的用户信息，为什么呢？因为每个session是隔离的，虽然键一样
         // 但是每个sessionID是隔离的
-        request.getSession().setAttribute(USER_LOGIN_STATE, safetyUser);
+        request.getSession().setAttribute(LOGIN_USER_KEY, safetyUser);
         return safetyUser;
     }
 
@@ -237,7 +237,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         safeUser.setGender(user.getGender());
         safeUser.setPhone(user.getPhone());
         safeUser.setEmail(user.getEmail());
-        safeUser.setPlanetCode(user.getPlanetCode());
         safeUser.setUserStatus(user.getUserStatus());
         safeUser.setTags(user.getTags());
         safeUser.setRole(user.getRole());
@@ -251,7 +250,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public int userLogout(HttpServletRequest httpServletRequest) {
         //移除登录态
-        httpServletRequest.getSession().removeAttribute(USER_LOGIN_STATE);
+        httpServletRequest.getSession().removeAttribute(LOGIN_USER_KEY);
         return 1;
     }
 
@@ -326,7 +325,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (request == null) {
             return null;
         }
-        User user = (User) request.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) request.getSession().getAttribute(LOGIN_USER_KEY);
         if (user == null) {
             throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
@@ -349,7 +348,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public boolean isAdmin(HttpServletRequest httpServletRequest) {
         // 如果是管理员可查
 
-        User user = (User) httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) httpServletRequest.getSession().getAttribute(LOGIN_USER_KEY);
 
         return (user != null && user.getRole() == ADMIN_ROLE);
     }
@@ -615,6 +614,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 用户注销
         int i = userLogout(request);
         if (i < 0) {
+            throw new BusinessEception(ErrorCode.SYSTEM, "系统异常");
+        }
+
+    }
+
+    /**
+     * 修改手机号
+     * @param phone
+     * @param newPhone
+     * @param request
+     */
+    @Override
+    public void updatePhone(String phone, String newPhone, HttpServletRequest request) {
+        if (phone.equals(newPhone)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "修改手机号与原来一致");
+        }
+        User logUser = this.getLogUser(request);
+        logUser.setPhone(newPhone);
+        //  获取此次对话，并修改保存到对话的对象信息 => 修改当前手机号信息
+        request.getSession().setAttribute(LOGIN_USER_KEY,logUser);
+        boolean flag = this.updateById(logUser);
+        if (!flag) {
             throw new BusinessEception(ErrorCode.SYSTEM, "系统异常");
         }
 

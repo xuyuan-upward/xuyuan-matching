@@ -29,7 +29,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import static xu.yuan.Constant.ChatConstant.*;
 import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
-import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
+import static xu.yuan.Constant.UserConstant.LOGIN_USER_KEY;
 
 
 /**
@@ -192,7 +192,7 @@ public class WebSocket {
             }
             HttpSession userHttpSession = (HttpSession) config.getUserProperties().get(HttpSession.class.getName());
             //根据当前用户HttpSession获取当前登录用户
-            User user = (User) userHttpSession.getAttribute(USER_LOGIN_STATE);
+            User user = (User) userHttpSession.getAttribute(LOGIN_USER_KEY);
             if (user != null) {
                 this.session = session;
                 this.httpSession = userHttpSession;
@@ -327,7 +327,7 @@ public class WebSocket {
             chatMessageVo.setIsAdmin(true);
         }
         // 获取当前登录用户 并判断是否是自己发的信息
-        User loginUser = (User) this.httpSession.getAttribute(USER_LOGIN_STATE);
+        User loginUser = (User) this.httpSession.getAttribute(LOGIN_USER_KEY);
         if (Objects.equals(loginUser.getId(), user.getId())) {
             chatMessageVo.setIsMy(true);
         }
@@ -362,7 +362,7 @@ public class WebSocket {
         if (user.getRole() == ADMIN_ROLE) {
             chatMessageVo.setIsAdmin(true);
         }
-        User loginUser = (User) this.httpSession.getAttribute(USER_LOGIN_STATE);
+        User loginUser = (User) this.httpSession.getAttribute(LOGIN_USER_KEY);
         if (Objects.equals(loginUser.getId(), user.getId())) {
             chatMessageVo.setIsMy(true);
         }
@@ -386,7 +386,7 @@ public class WebSocket {
         // 获取发送的消息
         ChatMessageVO chatMessageVo = chatService
                 .chatResult(user.getId(), toId, text, chatType, DateUtil.date(System.currentTimeMillis()));
-        User loginUser = (User) this.httpSession.getAttribute(USER_LOGIN_STATE);
+        User loginUser = (User) this.httpSession.getAttribute(LOGIN_USER_KEY);
         if (Objects.equals(loginUser.getId(), user.getId())) {
             chatMessageVo.setIsMy(true);
         }

@@ -8,7 +8,7 @@
 //import javax.servlet.http.HttpServletRequest;
 //import javax.servlet.http.HttpServletResponse;
 //
-//import static xu.yuan.Constant.UserConstant.USER_LOGIN_STATE;
+//import static xu.yuan.Constant.UserConstant.LOGIN_USER_KEY;
 //
 //@Slf4j
 //@Component
@@ -16,7 +16,7 @@
 //    @Override
 //    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
 //        //从session中获取user的信息
-//        User loginUser =(User)request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User loginUser =(User)request.getSession().getAttribute(LOGIN_USER_KEY);
 //        //判断用户是否登录
 //        if (null == loginUser){
 //            response.sendRedirect(request.getContextPath()+"/user/error");

@@ -14,6 +14,12 @@
         <spring-boot.version>2.6.13</spring-boot.version>
     </properties>
     <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx-controls -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>19</version>
+        </dependency>
 
         <!--gpt-ai接入-->
         <dependency>
@@ -48,6 +54,7 @@
 <!--            <artifactId>aliyun-java-sdk-core</artifactId>-->
 <!--            <version>3.0.7</version>-->
 <!--        </dependency>-->
+
         <dependency>
             <groupId>com.aliyun.oss</groupId>
             <artifactId>aliyun-sdk-oss</artifactId>
@@ -100,6 +107,7 @@
         <!--用java解析excel  https://easyexcel.opensource.alibaba.com/qa/-->
         <!-- https://mvnrepository.com/artifact/com.alibaba/easyexcel -->
 
+    <!-- 依赖项添加 -->
         <!--json与对象之间的转换-->
         <dependency>
             <groupId>com.google.code.gson</groupId>

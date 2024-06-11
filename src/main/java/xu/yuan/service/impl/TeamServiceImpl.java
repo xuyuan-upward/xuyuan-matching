@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 import static xu.yuan.Common.SystemCommon.MAXIMUM_JOINED_USER_AVATAR_NUM;
 import static xu.yuan.Common.SystemCommon.PAGE_SIZE;
 import static xu.yuan.Constant.RedisConstants.TEAM_LOCK_KEY;
+import static xu.yuan.Constant.UserConstant.ADMIN_ROLE;
 
 /**
  * @author 许苑
@@ -327,9 +328,10 @@ private void Verify (Team team,long userId){
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteTeam(long teamId, User loginUser) {
         Team team = this.getTeam(teamId);
-        // 校验是否是队长
+        // 校验是否是队长 当前登录用户
         long userId = loginUser.getId();
-        if (team.getUserId() != userId) {
+        // 两个都不是的时候不能解散
+        if (  loginUser.getRole() != ADMIN_ROLE && team.getUserId() != userId) {
             throw new BusinessEception(ErrorCode.NO_AUTH, "不是队长无权限");
         }
         QueryWrapper<UserTeam> wrapper = new QueryWrapper<>();

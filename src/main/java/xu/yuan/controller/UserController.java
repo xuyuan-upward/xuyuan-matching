@@ -1,7 +1,6 @@
 package xu.yuan.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.swagger.annotations.ApiImplicitParam;
@@ -19,7 +18,7 @@ import xu.yuan.Common.Result;
 import xu.yuan.Common.ResultUtils;
 import xu.yuan.Eception.BusinessEception;
 import xu.yuan.model.domain.User;
-import xu.yuan.model.request.UpdatePasswordRequest;
+import xu.yuan.model.request.UpdatePasswordOrPhoneRequest;
 import xu.yuan.model.request.UserLoginRequest;
 import xu.yuan.model.request.UserRegisterRequest;
 import xu.yuan.model.vo.UserVO;
@@ -134,7 +133,7 @@ public class UserController {
      */
     @GetMapping("/current")
     public Result<User> getCurrentUser(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+        Object userObj = request.getSession().getAttribute(LOGIN_USER_KEY);
         User currentUser = (User) userObj;
         // 每次都要校验是否进行登录，有点麻烦
         if (currentUser == null) {
@@ -290,7 +289,7 @@ public class UserController {
     public boolean isAdmin(HttpServletRequest httpServletRequest) {
 
         //仅管理员可查
-        User user = (User) httpServletRequest.getSession().getAttribute(USER_LOGIN_STATE);
+        User user = (User) httpServletRequest.getSession().getAttribute(LOGIN_USER_KEY);
 
         return (user != null && user.getRole() == ADMIN_ROLE);
     }
@@ -360,18 +359,18 @@ public class UserController {
     /**
      * 更新密码
      *
-     * @param updatePasswordRequest 更新密码请求
+     * @param updatePasswordOrPhoneRequest 更新密码请求
      * @return <{@link String}>
      */
-    @PutMapping("/forget")
+    @PutMapping("/forget/password")
     @ApiOperation(value = "修改密码")
     @ApiImplicitParams(
-            {@ApiImplicitParam(name = "updatePasswordRequest", value = "修改密码请求")})
-            public Result<String> updatePassword(@RequestBody UpdatePasswordRequest updatePasswordRequest,
+            {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "修改密码请求")})
+            public Result<String> updatePassword(@RequestBody UpdatePasswordOrPhoneRequest updatePasswordOrPhoneRequest,
     HttpServletRequest request) {
-        String phone = updatePasswordRequest.getPhone();
-        String password = updatePasswordRequest.getPassword();
-        String confirmPassword = updatePasswordRequest.getConfirmPassword();
+        String phone = updatePasswordOrPhoneRequest.getPhone();
+        String password = updatePasswordOrPhoneRequest.getPassword();
+        String confirmPassword = updatePasswordOrPhoneRequest.getConfirmPassword();
         if (StringUtils.isAnyBlank(phone,   password, confirmPassword)) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR,"请求参数为空");
         }
@@ -379,6 +378,34 @@ public class UserController {
 
         return ResultUtils.success("ok");
     }
+
+    /**
+     * 更新密码
+     *
+     * @param updatePasswordOrPhoneRequest 更新手机号
+     * @return <{@link String}>
+     */
+    @PutMapping("/forget/phone")
+    @ApiOperation(value = "修改手机号")
+    @ApiImplicitParams(
+            {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "修改手机号")})
+    public Result<String> updatePhone(@RequestBody UpdatePasswordOrPhoneRequest updatePasswordOrPhoneRequest,
+                                         HttpServletRequest request) {
+        if (userService.getLogUser(request) == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN, "未登录");
+        }
+        // 原来手机号
+        String phone = updatePasswordOrPhoneRequest.getPhone();
+        // 新的手机号
+        String newPhone = updatePasswordOrPhoneRequest.getNewPhone();
+        if (StringUtils.isAnyBlank(phone,newPhone)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"请求参数为空");
+        }
+        userService.updatePhone(phone,newPhone,request);
+
+        return ResultUtils.success("ok");
+    }
+
 
     /**
      * 修改密码，通过手机号发送验证码
@@ -392,6 +419,7 @@ public class UserController {
         }
         // 获取当前用户
         User logUser = userService.getLogUser(request);
+        // 准确的搜集和
         // 判断当前手机号是否和当前登录用户绑定一致
         if (!phone.equals(logUser.getPhone())) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "手机号与当前不一致");

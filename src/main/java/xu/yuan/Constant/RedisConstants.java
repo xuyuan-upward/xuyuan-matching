@@ -11,7 +11,7 @@ public final class RedisConstants {
     public static final String TEAM_LOCK_KEY = "team_lock";
     public static final String USER_LOCK_KEY = "user_lock";
     public static final int MAX_USER_TEAM_COUNT = 5;
-    public static final String LOGIN_USER_KEY = "xuyuan:login:token:";
+
 
     public static final Long LOGIN_USER_TTL = 15L;
     /**

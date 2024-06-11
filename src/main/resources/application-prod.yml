@@ -1,0 +1,16 @@
+# 上线环境配置
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: xuyuan-matching
+    password: 12345678
+#    username: root
+#    password: 1234
+    url: jdbc:mysql://47.120.70.248:3306/xuyuan-matching?serverTimezone=Asia/Shanghai
+#    url: jdbc:mysql://localhost:3306/xuyuan?serverTimezone=Asia/Shanghai
+  redis:
+#    host: localhost
+    host: 47.120.70.248
+    port: 6379
+    database: 0
+    password: Xuyuan1371480

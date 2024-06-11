@@ -85,11 +85,6 @@ public class User implements Serializable{
      */
     private String personality;
 
-    /**
-     * 星球编号
-     */
-    private int planetCode;
-
     private String tags;
 
     public String getTags() {

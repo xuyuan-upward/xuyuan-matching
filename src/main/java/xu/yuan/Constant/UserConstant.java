@@ -2,9 +2,9 @@ package xu.yuan.Constant;
 
 public class UserConstant {
     /**
-     * 用户登录态键
+     * 用户登录token
      */
-    public static final String USER_LOGIN_STATE = "UserloginState";
+    public static final String LOGIN_USER_KEY = "xuyuan:login:token:";
     /**
      * 管理员权限
      */

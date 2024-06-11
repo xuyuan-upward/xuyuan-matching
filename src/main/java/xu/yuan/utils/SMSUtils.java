@@ -9,6 +9,8 @@ import com.aliyuncs.profile.DefaultProfile;
 import com.aliyuncs.profile.IClientProfile;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.stereotype.Component;
+import xu.yuan.Eception.BusinessEception;
+import xu.yuan.enums.ErrorCode;
 import xu.yuan.properties.SMSProperties;
 
 import javax.annotation.PostConstruct;
@@ -56,7 +58,7 @@ public class SMSUtils {
             // 这个用来标识
             log.info("发送结果: " + response.getMessage());
         } catch (ClientException e) {
-            throw new RuntimeException(e);
+            throw new BusinessEception(ErrorCode.SYSTEM,"系统异常");
         }
     }
 

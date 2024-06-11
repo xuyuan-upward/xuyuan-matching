@@ -5,8 +5,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 @Data
-@ApiModel(value = "密码更新请求")
-public class UpdatePasswordRequest {
+@ApiModel(value = "密码or手机号更新请求")
+public class UpdatePasswordOrPhoneRequest {
     /**
      * 电话
      */
@@ -27,4 +27,9 @@ public class UpdatePasswordRequest {
      */
     @ApiModelProperty(value = "确认密码")
     private String confirmPassword;
+    /**
+     * 新的手机号
+     */
+    @ApiModelProperty(value = "新的手机号")
+    private String newPhone;
 }
