@@ -16,7 +16,7 @@ public class RedissionConfig {
     @Value("${spring.redis.port}")
     private String port;
     @Value("${spring.redis.password}")
-    private String password;
+    private String password ;
 
     @Bean
     public RedissonClient redissonClient(){

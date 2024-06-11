@@ -15,7 +15,7 @@ spring:
     url: jdbc:mysql://localhost:3306/xuyuan?serverTimezone=Asia/Shanghai
   # session 失效时间（分钟）
   session:
-    timeout: 4000  #表示一天过期
+    timeout: 10m  #
     store-type: redis
   mvc:
     pathmatch:
@@ -25,9 +25,11 @@ spring:
 #    host: 47.120.70.248
     port: 6379
     database: 0
-#    上线环境时候需要打开
-  profiles:
-    active: prod
+    password:
+  #    上线环境时候需要打开
+#  profiles:
+#    active: prod
+
 #    password: Xuyuan1371480
 server:
   port: 8080
