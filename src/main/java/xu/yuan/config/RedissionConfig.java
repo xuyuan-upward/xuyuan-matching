@@ -1,5 +1,6 @@
 package xu.yuan.config;
 
+import org.apache.commons.lang3.StringUtils;
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
@@ -14,16 +15,20 @@ public class RedissionConfig {
 
     @Value("${spring.redis.port}")
     private String port;
-//    @Value("${spring.redis.password}")
-//    private String password;
+    @Value("${spring.redis.password}")
+    private String password;
 
     @Bean
     public RedissonClient redissonClient(){
         // 1. Create config object
         Config config = new Config();
         String address = "redis://" + host + ":" + port;
-//        config.useSingleServer().setAddress(address).setPassword(password);
-        config.useSingleServer().setAddress(address);
+        // 没有密码设置这个
+        if (StringUtils.isBlank(password)){
+            config.useSingleServer().setAddress(address);
+        }else{
+            config.useSingleServer().setAddress(address).setPassword(password);
+        }
         // 2. Create Redisson instance(创建实例)
         RedissonClient redisson = Redisson.create(config);
         return redisson;

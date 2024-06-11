@@ -26,8 +26,8 @@ spring:
     port: 6379
     database: 0
 #    上线环境时候需要打开
-#  profiles:
-#    active: prod
+  profiles:
+    active: prod
 #    password: Xuyuan1371480
 server:
   port: 8080
