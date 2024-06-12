@@ -58,6 +58,9 @@ private AliOSSUtils aliOSSUtils;
     public void addBlog(BlogAddRequest blogAddRequest, User loginUser) {
         // 获取博客内容
         MultipartFile[] images = blogAddRequest.getImages();
+        if (images == null && images.length == 0) {
+            throw new BusinessEception(ErrorCode.NULL_ERROR,"照片不能为空");
+        }
         // 存储每一张照片
         ArrayList<String> imageList = new ArrayList<>();
         // 上传照片
@@ -135,6 +138,9 @@ private AliOSSUtils aliOSSUtils;
             User one = userService.getOne(userLambdaQueryWrapper);
             userLambdaQueryWrapper.clear();
             UserVO userVO = new UserVO();
+            if(one == null){
+                throw new BusinessEception(ErrorCode.SYSTEM, "系统错误");
+            }
             BeanUtils.copyProperties(one,userVO);
             blogVO.setAuthor(userVO);
         });

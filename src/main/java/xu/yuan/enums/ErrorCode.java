@@ -9,7 +9,8 @@ public enum ErrorCode {
     NOT_LOGIN(40100, "未登录", "未登录"),
     NO_AUTH(40101, "无权限", ""),
     SUCCESS(0, "ok", ""),
-    SYSTEM(4100, "系统异常", "");
+    SYSTEM(4100, "系统异常", ""),
+    NO_REGISTER(40002,"用户未注册","");
     private final int code;
     private final String message;
     private final String description;

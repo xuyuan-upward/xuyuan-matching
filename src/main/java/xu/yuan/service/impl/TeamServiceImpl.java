@@ -165,6 +165,10 @@ private void Verify (Team team,long userId){
         if (oldTeam == null) {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
+        if (teamUpdateRequest.getMaxNum() < teamUpdateRequest.getHasJoinNum()) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "当前设置最大队伍人数小于加入人数");
+        }
+
         // 判断是否为加密,加密需要输入加密密码
         TeamStatusEnum statusEnum = TeamStatusEnum.getTeamStatusEnum(teamUpdateRequest.getStatus());
         if (statusEnum.equals(TeamStatusEnum.SECRETE)) {

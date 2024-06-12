@@ -35,7 +35,7 @@ public interface UserService extends IService<User> {
      * @param httpServletRequest
      * @return
      */
-    User doLogin(String userAccount , String userPassword, HttpServletRequest httpServletRequest);
+    void doLogin(String userAccount , String userPassword, HttpServletRequest httpServletRequest);
 
     /**
      * 用户返回前端脱敏

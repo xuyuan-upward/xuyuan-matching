@@ -150,8 +150,8 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
     /**
      * 聊天结果
      *
-     * @param userId 用户id
-     * @param text   文本
+     * @param userId 队伍发送者
+     * @param text   文本内容
      * @return {@link ChatMessageVO}
      */
     private ChatMessageVO chatResult(Long userId, String text) {
@@ -167,17 +167,21 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
      * 设置是否属于自己的信息
      *
      * @param loginUser              登录用户
-     * @param userId                 用户id
+     * @param userId                 队伍创建者用户id
      * @param chatLambdaQueryWrapper 聊天lambda查询包装器
      * @return {@link List}<{@link ChatMessageVO}>
      */
     private List<ChatMessageVO> returnMessage(User loginUser,
                                               Long userId,
                                               LambdaQueryWrapper<Chat> chatLambdaQueryWrapper) {
+        // TODO bug： 数据库中直接删除用户时候，会导致原有的聊天记录根据发送用户等，找不到用户从而出现报错
+        // 代表多表查询时候出现的问题，如果用户不存在了，一定要把和与用户相关的表信息也要删除
         List<Chat> chatList = this.list(chatLambdaQueryWrapper);
         return chatList.stream().map(chat -> {
+            //
             ChatMessageVO chatMessageVo = chatResult(chat.getFromId(), chat.getText());
             boolean isCaptain = userId != null && userId.equals(chat.getFromId());
+            // 设置自己是否是管理者
             if (userService.getById(chat.getFromId()).getRole() == ADMIN_ROLE || isCaptain) {
                 chatMessageVo.setIsAdmin(true);
             }
@@ -268,6 +272,13 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
         }
     }
 
+    /**
+     * 获取队伍信息
+     * @param teamChat
+     * @param loginUser
+     * @param chatRequest
+     * @return
+     */
     @Override
     public List<ChatMessageVO> getTeamChat(int teamChat, User loginUser, ChatRequest chatRequest) {
         Long teamId = chatRequest.getTeamId();
@@ -281,9 +292,12 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
             saveCache(CACHE_CHAT_TEAM, String.valueOf(teamId), chatMessageVOS);
             return chatMessageVOS;
         }
+        // 不是缓存数据，数据库中寻找
+
         Team team = teamService.getById(teamId);
         LambdaQueryWrapper<Chat> chatLambdaQueryWrapper = new LambdaQueryWrapper<>();
         chatLambdaQueryWrapper.eq(Chat::getChatType, teamChat).eq(Chat::getTeamId, teamId);
+        // 获取队伍信息，并将每条队伍信息判断是否属于自己的
         List<ChatMessageVO> chatMessageVOS = returnMessage(loginUser, team.getUserId(), chatLambdaQueryWrapper);
         // 由于第一次没有数据，获取到的数据存放到redis中去
         saveCache(CACHE_CHAT_TEAM, String.valueOf(teamId), chatMessageVOS);

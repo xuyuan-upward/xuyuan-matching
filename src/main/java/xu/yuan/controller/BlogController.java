@@ -70,6 +70,9 @@ public class BlogController {
             throw new BusinessEception(ErrorCode.NULL_ERROR);
         }
         User logUser = userService.getLogUser(request);
+        if (logUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
         Page<BlogVO> blogVOPage = blogService.getList(currentPage, searchText, logUser.getId());
         return ResultUtils.success(blogVOPage);
     }

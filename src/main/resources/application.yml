@@ -27,8 +27,8 @@ spring:
     database: 0
     password:
   #    上线环境时候需要打开
-#  profiles:
-#    active: prod
+  profiles:
+    active: prod
 
 #    password: Xuyuan1371480
 server:

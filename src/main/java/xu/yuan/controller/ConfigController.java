@@ -19,6 +19,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import static xu.yuan.Constant.RedisConstants.RECOMMAN_LAST_KEY;
+import static xu.yuan.Constant.UserConstant.LOGIN_USER_KEY;
 
 @RestController
 @RequestMapping("/config")
@@ -39,9 +40,14 @@ private UserService userService;
         } catch (IOException e) {
             throw  new BusinessEception(ErrorCode.SYSTEM);
         }
+        // 上传照片的时候同时要跟新当前登录状态下用户的信息
         //  存放到数据库里面
+
         User logUser = userService.getLogUser(request);
         logUser.setAvatarUrl(imgURL);
+        // TODO 上传照片的时候同时要跟新当前登录状态下用户的信息
+        //  所谓修改用户信息的时候都需要进行所谓状态信息修改  这个值得考虑
+//        request.getSession().setAttribute(LOGIN_USER_KEY,logUser);
         userService.updateById(logUser);
         // 删除redis缓存
         redisTemplate.delete(RECOMMAN_LAST_KEY);

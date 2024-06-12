@@ -194,10 +194,11 @@ public class TeamController {
      */
     @GetMapping("/list")
     public Result<Page<TeamVO>> listTeams(long currentPage, TeamRequst teamRequst, HttpServletRequest request) {
-        if (teamRequst == null) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
-        }
+        // 判断当前有没有进行登录
         User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN, "没有登录");
+        }
         // 获取队伍条件后的分页队伍信息 （主要包括创建者的信息，和一些队伍的基本信息
         Page<TeamVO> teamVoPage = teamService.listTeams(currentPage, teamRequst, userService.isAdmin(loginUser));
         // 获取加入队伍的队友照片

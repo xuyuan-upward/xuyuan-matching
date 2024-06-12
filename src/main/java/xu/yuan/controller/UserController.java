@@ -76,15 +76,15 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    public Result<User> Userlogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) {
+    public Result<String> Userlogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest httpServletRequest) {
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
             return null;
         }
-        User user = userService.doLogin(userAccount, userPassword, httpServletRequest);
+        userService.doLogin(userAccount, userPassword, httpServletRequest);
         System.out.println("你好鱼友，我是许苑向上");
-        return ResultUtils.success(user);
+        return ResultUtils.success("success");
     }
 
     /**
@@ -139,6 +139,7 @@ public class UserController {
         if (currentUser == null) {
             throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
+        // 获取当前用户Id的信息 不是通过session里面获取
         long userId = currentUser.getId();
         // TODO 校验用户是否合法
         User user = userService.getById(userId);
@@ -334,6 +335,7 @@ public class UserController {
         if (loginUser == null) {
             throw new BusinessEception(ErrorCode.NOT_LOGIN);
         }
+        // 修改标签
         userService.updateTags(tags, loginUser.getId());
         // 删除redis缓存
         redisTemplate.delete(RECOMMAN_LAST_KEY);
@@ -341,7 +343,7 @@ public class UserController {
     }
 
     /**
-     * 获取到的相似度较高的用户，按分页进行排序
+     * 获取到的标签相似度较高的用户，按分页进行排序
      * @param currentPage 表示第几页
      * @param request
      * @return
@@ -352,20 +354,24 @@ public class UserController {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
         User logUser = userService.getLogUser(request);
+        if (logUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN, "未登录");
+        }
+        //
         Page<User> userVoList = userService.matchUsers(currentPage, logUser,username);
         return ResultUtils.success(userVoList);
 
     }
     /**
-     * 更新密码
+     * 忘记密码 或则 更新密码
      *
      * @param updatePasswordOrPhoneRequest 更新密码请求
      * @return <{@link String}>
      */
-    @PutMapping("/forget/password")
-    @ApiOperation(value = "修改密码")
+    @PutMapping("/update/password")
+    @ApiOperation(value = "忘记密码 或则 更新密码 ")
     @ApiImplicitParams(
-            {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "修改密码请求")})
+            {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "忘记密码 或则 更新密码 请求")})
             public Result<String> updatePassword(@RequestBody UpdatePasswordOrPhoneRequest updatePasswordOrPhoneRequest,
     HttpServletRequest request) {
         String phone = updatePasswordOrPhoneRequest.getPhone();
@@ -379,13 +385,37 @@ public class UserController {
         return ResultUtils.success("ok");
     }
 
-    /**
+/*    *//**
      * 更新密码
      *
-     * @param updatePasswordOrPhoneRequest 更新手机号
+     * @param updatePasswordOrPhoneRequest 更新密码请求
+     * @return <{@link String}>
+     *//*
+    @PutMapping("/forget/password")
+    @ApiOperation(value = "忘记密码")
+    @ApiImplicitParams(
+            {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "忘记密码请求")})
+    public Result<String> forgetPassword(@RequestBody UpdatePasswordOrPhoneRequest updatePasswordOrPhoneRequest,
+                                         HttpServletRequest request) {
+        String phone = updatePasswordOrPhoneRequest.getPhone();
+        String password = updatePasswordOrPhoneRequest.getPassword();
+        String confirmPassword = updatePasswordOrPhoneRequest.getConfirmPassword();
+        if (StringUtils.isAnyBlank(phone,   password, confirmPassword)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"请求参数为空");
+        }
+        userService.updatePassword(phone,  password, confirmPassword,request);
+
+        return ResultUtils.success("ok");
+    }*/
+
+
+    /**
+     * 修改手机号
+     *
+     * @param updatePasswordOrPhoneRequest 修改手机号
      * @return <{@link String}>
      */
-    @PutMapping("/forget/phone")
+    @PutMapping("/update/phone")
     @ApiOperation(value = "修改手机号")
     @ApiImplicitParams(
             {@ApiImplicitParam(name = "updatePasswordOrPhoneRequest", value = "修改手机号")})
@@ -408,22 +438,25 @@ public class UserController {
 
 
     /**
-     * 修改密码，通过手机号发送验证码
+     * 忘记密码 或则 修改密码，功能是：通过手机号发送验证码
      */
-    @GetMapping("/forget")
+    @GetMapping("/update")
     @ApiImplicitParams(
             {@ApiImplicitParam(name = "phone", value = "手机号")})
     public Result<String> getUserByPhone(String phone,HttpServletRequest request) {
         if (phone == null) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR);
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"手机号参数为空");
         }
         // 获取当前用户
         User logUser = userService.getLogUser(request);
-        // 准确的搜集和
-        // 判断当前手机号是否和当前登录用户绑定一致
-        if (!phone.equals(logUser.getPhone())) {
-            throw new BusinessEception(ErrorCode.PARAMS_ERROR, "手机号与当前不一致");
+        // 登录 => 修改密码
+        if (logUser != null) {
+            // 判断当前手机号是否和当前登录用户绑定一致
+            if (!phone.equals(logUser.getPhone())) {
+                throw new BusinessEception(ErrorCode.PARAMS_ERROR, "手机号与当前不一致");
+            }
         }
+        // 表示没有登录 => 忘记密码 不需要校验是否和当前一致
         String key = USER_FORGET_PASSWORD_KEY + phone;
             //获得验证码
             Integer code = ValidateCodeUtils.generateValidateCode();

@@ -110,7 +110,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUserAccount, userAccount);
+        // 表明手机号和用户名都不能重复
+        userLambdaQueryWrapper.eq(User::getUserAccount, userAccount).eq(User::getPhone,phone);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名已经存在");
@@ -134,78 +135,42 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     /**
      * 登录校验
-     *
      * @param userAccount
      * @param userPassword
-     * @param
-     * @return
+     * @param request
      */
-  /*  @Override
-    public User doLogin(String userAccount, String userPassword, HttpServletRequest httpServletRequest) {
-        //1.校验
-        if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
-        }
-        if (userAccount.length() < 4) {
-            return null;
-        }
-        if (userPassword.length() < 8) {
-            return null;
-        }
-        String regEx = "[\\u00A0\\s\"`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
-        Pattern p = Pattern.compile(regEx);
-        Matcher m = p.matcher(userAccount);
-
-        if (m.find()) {
-            return null;
-        }
-
-        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-        //用户密码校验
-        LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        userLambdaQueryWrapper.eq(User::getUseraccount, userAccount)
-                .eq(User::getUserpassword, encryptPassword);
-        User user = userMapper.selectOne(userLambdaQueryWrapper);
-        if (user == null) {
-            log.info("password error or account error");
-            return null;
-        }
-      //用户脱敏
-        User saftyUser = getSaftyUser(user);
-        log.info("saftyUser:{}",saftyUser);
-        //记录用户登录状态
-        httpServletRequest.getSession().setAttribute(LOGIN_USER_KEY, saftyUser);
-        return saftyUser;
-    }*/
     @Override
-    public User doLogin(String userAccount, String userPassword, HttpServletRequest request) {
+    public void doLogin(String userAccount, String userPassword, HttpServletRequest request) {
         // 1. 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            return null;
+           throw new BusinessEception(ErrorCode.NULL_ERROR,"账号或者密码为空");
         }
         if (userAccount.length() < 4) {
-            return null;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"密码小于4位");
         }
         if (userPassword.length() < 8) {
-            return null;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"账号小于8位");
         }
         // 账户不能包含特殊字符
         String validPattern = "[`~!@#$%^&*()+=|{}':;',\\\\[\\\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]";
         Matcher matcher = Pattern.compile(validPattern).matcher(userAccount);
         if (matcher.find()) {
-            return null;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"账号不能包含特殊字符");
         }
         // 2. 加密
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
-        // 查询用户是否存在
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("userAccount", userAccount);
-        queryWrapper.eq("userPassword", encryptPassword);
-        User user = userMapper.selectOne(queryWrapper);
-        // 用户不存在
+        //
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        // 根据账号查询
+        wrapper.eq(User::getUserAccount, userAccount);
+        User user = this.getOne(wrapper);
+        // 账号不存在
         if (user == null) {
             log.info("user login failed, userAccount cannot match userPassword");
-            return null;
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"用户不存在");
+        }
+        if (!user.getUserPassword().equals(encryptPassword)) {
+            throw new BusinessEception(ErrorCode.PARAMS_ERROR,"密码错误");
         }
         // 3. 用户脱敏
         User safetyUser = getSaftyUser(user);
@@ -217,7 +182,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 最重要的一点就是 没有使用redis存储每个用户的用户信息，为什么呢？因为每个session是隔离的，虽然键一样
         // 但是每个sessionID是隔离的
         request.getSession().setAttribute(LOGIN_USER_KEY, safetyUser);
-        return safetyUser;
     }
 
     /**
@@ -326,9 +290,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             return null;
         }
         User user = (User) request.getSession().getAttribute(LOGIN_USER_KEY);
-        if (user == null) {
-            throw new BusinessEception(ErrorCode.NOT_LOGIN);
-        }
+
         return user;
     }
 
@@ -382,7 +344,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             else {
                 userPage = this.getMatchUsers(logUser, currentPage);
                 if (userPage.getRecords() != null) {
-                    // 转化成json数据保存到redis中去
+                    // 转化成json数据保存到redis中去 redisTemplate中只能存放string
                     String toJsonPage = gson.toJson(userPage);
                     redisTemplate.opsForValue().set(MatchKey,toJsonPage,2, TimeUnit.MINUTES);
                 }
@@ -453,14 +415,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         // 用来存放各个匹配用户的心动分数 User 心动分数
         List<Pair<User, Long>> userMatchList = new ArrayList<>();
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
-        wrapper.select(User::getAvatarUrl,User::getPersonality,User::getAvatarUrl,User::getTags,User::getUserAccount,User::getUsername);
+        wrapper.select(User::getAvatarUrl,User::getPersonality,User::getAvatarUrl,User::getTags,User::getUserAccount,User::getUsername,User::getId);
         // 列出需要字段的所有用户
         List<User> userList = this.list(wrapper);
         for (User user : userList) {
             String userTags = user.getTags();
             List<String> tagsList = gson.fromJson(userTags, new TypeToken<List>() {
             }.getType());
-            // 筛选掉空的标签和自己的标签
+            // 筛选掉空的标签和自己
             long userId = user.getId();
             if (userId == loginUserId || (CollectionUtils.isEmpty(tagsList))) {
                 continue;
@@ -567,6 +529,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 //        return users;
 //    }
 
+    /**
+     * 修改用户的标签
+     * @param tags
+     * @param id
+     */
     @Override
     public void updateTags(List<String> tags, long id) {
         User user = new User();
@@ -575,6 +542,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         System.out.println(userTags);
         user.setTags(userTags);
         user.setId(id);
+
         boolean flag = this.updateById(user);
         if (!flag) {
             throw new BusinessEception(ErrorCode.SYSTEM);
@@ -582,7 +550,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     /**
-     * 发送验证码或者修改密码
+     * 忘记密码或者修改密码
      *
      * @param phone
      * @param
@@ -608,15 +576,36 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 //        User user = this.getOne(userLambdaQueryWrapper);
         // 2.根据当前登录用户查找当前信息
         User logUser = this.getLogUser(request);
+        // 获取加密密码
         String encryptPassword = DigestUtils.md5DigestAsHex((SALT + password).getBytes());
-        logUser.setUserPassword(encryptPassword);
-        this.updateById(logUser);
-        // 用户注销
+        // 未登录
+        if (logUser == null) {
+            // 根据手机号查找用户
+            LambdaQueryWrapper<User> userwrapper = new LambdaQueryWrapper<>();
+            userwrapper.eq(User::getPhone, phone);
+            User user = this.getOne(userwrapper);
+            // 查询不到说明没有用户
+            if (user == null) {
+                throw new BusinessEception(ErrorCode.NO_REGISTER, "用户未注册");
+            }
+            // 设置密码
+            user.setUserPassword(encryptPassword);
+            // 修改密码
+            this.updateById(user);
+            // 结束方法
+            return;
+        }
+        // 登录
+        // 获取当前用户id信息
+        long userId = logUser.getId();
+        User user = this.getById(userId);
+        user.setUserPassword(encryptPassword);
+        this.updateById(user);
+        // TODO  bug：用户注销同时，如果
         int i = userLogout(request);
         if (i < 0) {
             throw new BusinessEception(ErrorCode.SYSTEM, "系统异常");
         }
-
     }
 
     /**

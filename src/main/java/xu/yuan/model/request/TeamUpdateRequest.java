@@ -38,7 +38,16 @@ public class TeamUpdateRequest extends PageRequest {
      * 0 - 公开，1 - 私有，2 - 加密
      */
     private Integer status;
-
+    /**
+     * 最大人数
+     */
+    private Integer maxNum;
+    /**
+     * 队伍密码
+     */
     private String password;
-
+    /**
+     * 当前队伍加入人数
+     */
+    private Integer hasJoinNum;
 }
