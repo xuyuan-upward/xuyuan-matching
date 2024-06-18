@@ -456,7 +456,13 @@ public class UserController {
                 throw new BusinessEception(ErrorCode.PARAMS_ERROR, "手机号与当前不一致");
             }
         }
-        // 表示没有登录 => 忘记密码 不需要校验是否和当前一致
+        // 表示没有登录 => 忘记密码 不需要校验是否和当前一致 但是需要校验输入的手机号是否存在
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getPhone, phone);
+        User user = userService.getOne(wrapper);
+        if (user == null) {
+            throw new BusinessEception(ErrorCode.NO_REGISTER, "用户未注册");
+        }
         String key = USER_FORGET_PASSWORD_KEY + phone;
             //获得验证码
             Integer code = ValidateCodeUtils.generateValidateCode();

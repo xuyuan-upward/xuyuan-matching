@@ -1,5 +1,6 @@
 package xu.yuan.service.impl;
 
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -31,6 +32,7 @@ import xu.yuan.service.UserService;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -306,7 +308,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
 
     /**
      * 返回私人聊天信息列表
-     * @param id
+     * @param 当前登录用户id
      * @return
      */
     @Override
@@ -315,6 +317,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
             throw new BusinessEception(ErrorCode.PARAMS_ERROR);
         }
         LambdaQueryWrapper<Chat> Chatwrapper = new LambdaQueryWrapper<>();
+        // 获取我发送的人
         Chatwrapper.eq(Chat::getFromId, id).eq(Chat::getChatType, PRIVATE_CHAT);
         List<Chat> MySend = this.list(Chatwrapper);
         // 去除重复的元素
@@ -334,7 +337,11 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
             Long fromId = chat.getFromId();
             userIdSet.add(fromId);
         });
-        // 统一得出关于我和其他人联系的所有信息
+        // 统一得出关于我和其他人联系的所有信息 两者都没有时候，直接返回空
+        // listByIds => 参数不能为空
+        if (CollectionUtil.isEmpty(userIdSet)) {
+            return new ArrayList<>();
+        }
         List<User> userList = userService.listByIds(userIdSet);
         List<PrivateChatVO> privateChatVOS = userList.stream().map((user) -> {
             PrivateChatVO privateChatVO = new PrivateChatVO();

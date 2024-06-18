@@ -12,6 +12,7 @@ import xu.yuan.Eception.BusinessEception;
 import xu.yuan.enums.ErrorCode;
 import xu.yuan.model.domain.User;
 import xu.yuan.model.request.BlogAddRequest;
+import xu.yuan.model.request.BlogUpdateRequest;
 import xu.yuan.model.vo.BlogVO;
 import xu.yuan.service.BlogService;
 import xu.yuan.service.UserService;
@@ -120,5 +121,30 @@ public class BlogController {
         boolean admin = userService.isAdmin(loginUser);
         blogService.IsAuthriotyDeleteBlog(id, loginUser.getId(), admin);
         return ResultUtils.success("删除成功");
+    }
+
+
+    /**
+     * 删除博客通过id
+     *
+     * @param blogUpdateRequest      修改请求
+     * @param request 请求
+     */
+    @PostMapping("/update")
+    @ApiOperation(value = "修改博文")
+    public Result<String> deleteBlogById( BlogUpdateRequest blogUpdateRequest, HttpServletRequest request) {
+        User loginUser = userService.getLogUser(request);
+        if (loginUser == null) {
+            throw new BusinessEception(ErrorCode.NOT_LOGIN);
+        }
+        if (blogUpdateRequest == null) {
+            throw new BusinessEception(ErrorCode.NULL_ERROR,"请求参数为空");
+        }
+        // 当前作者id
+        Long id = blogUpdateRequest.getId();
+        // 判断当前登录用户是否是管理员
+        boolean admin = userService.isAdmin(loginUser);
+        blogService.IsAuthriotyUpdateBlog(id, loginUser, admin,blogUpdateRequest);
+        return ResultUtils.success("修改成功");
     }
 }

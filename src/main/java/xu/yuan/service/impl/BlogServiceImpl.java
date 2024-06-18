@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.context.annotation.Bean;
 import org.springframework.web.multipart.MultipartFile;
 import xu.yuan.Eception.BusinessEception;
 import xu.yuan.enums.ErrorCode;
@@ -14,6 +13,7 @@ import xu.yuan.model.domain.Blog;
 import xu.yuan.model.domain.Follow;
 import xu.yuan.model.domain.User;
 import xu.yuan.model.request.BlogAddRequest;
+import xu.yuan.model.request.BlogUpdateRequest;
 import xu.yuan.model.vo.BlogVO;
 import xu.yuan.model.vo.UserVO;
 import xu.yuan.service.BlogService;
@@ -26,6 +26,7 @@ import xu.yuan.utils.AliOSSUtils;
 import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -93,8 +94,15 @@ private AliOSSUtils aliOSSUtils;
      */
     @Override
     public Page<BlogVO> getList(long currentPage, String searchText, long loginId) {
+
         LambdaQueryWrapper<Blog> blogLambdaQueryWrapper = new LambdaQueryWrapper<>();
-        blogLambdaQueryWrapper.like(StringUtils.isNotBlank(searchText), Blog::getTitle, searchText);
+        if (StringUtils.isNotBlank(searchText)) {
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.like(User::getUsername, searchText).select(User::getId);
+            List<Long> userIds = userService.list(wrapper).stream().map(User::getId).collect(Collectors.toList());
+            blogLambdaQueryWrapper.like(Blog::getTitle, searchText)
+                    .or().like(Blog::getContent,searchText).or().in(CollectionUtil.isNotEmpty(userIds),Blog::getUserId,userIds);
+        }
         blogLambdaQueryWrapper.orderBy(true, false, Blog::getCreateTime);
         Page<Blog> blogPage = this.page(new Page<>(currentPage, PAGE_SIZE), blogLambdaQueryWrapper);
         Page<BlogVO> blogVoPage = new Page<>();
@@ -191,6 +199,59 @@ private AliOSSUtils aliOSSUtils;
             throw new BusinessEception(ErrorCode.NO_AUTH, "不是作者，没有权限删除");
         }
         this.removeById(id);
+    }
+
+    /**
+     * 修改文章
+     * @param id 当前作者id
+     * @param loginUser 当前登录用户
+     * @param admin
+     * @param blogUpdateRequest
+     */
+    @Override
+    public void IsAuthriotyUpdateBlog(Long id, User loginUser, boolean admin, BlogUpdateRequest blogUpdateRequest) {
+        // 判断是否可以修改
+        if (id != loginUser.getId() && !admin) {
+            throw new BusinessEception(ErrorCode.NO_AUTH, "没有权限");
+        }
+        // 可以修改
+        // 获取博客内容
+        MultipartFile[] images = blogUpdateRequest.getImages();
+        // 存储每一张照片
+        ArrayList<String> imageList = new ArrayList<>();
+        // 上传照片
+        String upload = null;
+        if (images != null) {
+            for (MultipartFile image : images) {
+                try {
+                    upload = aliOSSUtils.upload(image);
+                    imageList.add(upload);
+                } catch (IOException e) {
+                    throw new BusinessEception(ErrorCode.SYSTEM, "系统出现异常");
+                }
+            }
+        }
+        // 把存在的加入到集合中去
+        String imgStr = blogUpdateRequest.getImgStr();
+        Arrays.stream(imgStr.split(",")).forEach(str ->
+                imageList.add(str));
+        String content = blogUpdateRequest.getContent();
+        String title = blogUpdateRequest.getTitle();
+        // 获取作者id
+        long autorId = loginUser.getId();
+        // 将图片按照，分隔加入数据库
+        String join = StringUtils.join(imageList, ",");
+        //添加
+        LambdaQueryWrapper<Blog> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Blog::getUserId,autorId);
+        Blog blog = new Blog();
+        blog.setContent(content);
+        blog.setTitle(title);
+        blog.setImages(join);
+        boolean flag = this.update(blog,wrapper);
+        if (!flag) {
+            throw new BusinessEception(ErrorCode.SYSTEM, "系统异常");
+        }
     }
 
     /**

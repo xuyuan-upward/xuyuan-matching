@@ -22,13 +22,13 @@ public class Chat implements Serializable {
     private Long id;
 
     /**
-     * 发送消息id
+     * 发送人消息id
      */
     @TableField(value = "from_id")
     private Long fromId;
 
     /**
-     * 接收消息id
+     * 接收人消息id
      */
     @TableField(value = "to_id")
     private Long toId;

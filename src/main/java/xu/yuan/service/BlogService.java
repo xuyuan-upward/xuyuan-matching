@@ -5,6 +5,7 @@ import xu.yuan.model.domain.Blog;
 import com.baomidou.mybatisplus.extension.service.IService;
 import xu.yuan.model.domain.User;
 import xu.yuan.model.request.BlogAddRequest;
+import xu.yuan.model.request.BlogUpdateRequest;
 import xu.yuan.model.vo.BlogVO;
 
 /**
@@ -22,4 +23,7 @@ public interface BlogService extends IService<Blog> {
 
 
     void IsAuthriotyDeleteBlog(Long id, long id1, boolean admin);
+
+
+    void IsAuthriotyUpdateBlog(Long id, User id1, boolean admin, BlogUpdateRequest blogUpdateRequest);
 }
