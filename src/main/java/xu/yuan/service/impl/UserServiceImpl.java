@@ -111,7 +111,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         //用户不能重复
         LambdaQueryWrapper<User> userLambdaQueryWrapper = new LambdaQueryWrapper<>();
         // 表明手机号和用户名都不能重复
-        userLambdaQueryWrapper.eq(User::getUserAccount, userAccount).eq(User::getPhone,phone);
+        userLambdaQueryWrapper.eq(User::getUserAccount, userAccount).or().eq(User::getPhone,phone);
         int count = this.count(userLambdaQueryWrapper);
         if (count > 0) {
             throw new BusinessEception(ErrorCode.PARAMS_ERROR, "用户名已经存在");

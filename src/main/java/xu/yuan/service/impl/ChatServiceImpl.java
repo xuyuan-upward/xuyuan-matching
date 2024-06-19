@@ -308,7 +308,7 @@ public class ChatServiceImpl extends ServiceImpl<ChatMapper, Chat>
 
     /**
      * 返回私人聊天信息列表
-     * @param 当前登录用户id
+     * @param id 当前登录用户
      * @return
      */
     @Override
